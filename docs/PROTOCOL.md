@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Date:** November 5, 2025  
-**Scope:** Communication protocol between Raspberry Pi 5 Hub (Java/something else) and Raspberry Pi Pico W clients (MicroPythong)
+**Scope:** Communication protocol between Raspberry Pi 5 Hub (Java) and Raspberry Pi Pico W clients (Python)
 
 ---
 
