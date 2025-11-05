@@ -123,26 +123,6 @@ else:
     print("Not connected to hub")
 ```
 
-### `reconnect()`
-
-Manually trigger reconnection to MQTT broker.
-
-```python
-reconnect() -> bool
-```
-
-**Returns:**
-- `True` if reconnection successful
-- `False` if reconnection failed
-
-**Note:** This is called automatically by `start()` if connection is lost. You typically don't need to call this manually.
-
-**Example:**
-```python
-if not client.is_connected():
-    client.reconnect()
-```
-
 ### `start()`
 
 Start heartbeat timer and command listener (blocking call).
@@ -213,7 +193,7 @@ publish_data(sensor_type: str, data: dict, unit: str = None, timestamp: str = No
 **Parameters:**
 - `sensor_type` (str): Type of sensor (e.g., "DHT22", "DS18B20", "BME280")
 - `data` (dict): Sensor readings as key-value pairs
-- `unit` (str, optional): Unit of measurement (e.g., "celsius", "fahrenheit", "humidity_percent")
+- `unit` (str, optional): Unit of measurement (e.g., "celsius", "fahrenheit")
 - `timestamp` (str, optional): ISO 8601 timestamp (auto-generated if not provided)
 
 **Returns:**
@@ -226,37 +206,9 @@ publish_data(sensor_type: str, data: dict, unit: str = None, timestamp: str = No
 
 **Example - Temperature and Humidity:**
 ```python
-from dht import DHT22
-from machine import Pin
-import time
-
-sensor = DHT22(Pin(15))
-
-client = PicoSwarmClient()
-client.connect()
-
-while True:
-    sensor.measure()
-    temp = sensor.temperature()
-    humidity = sensor.humidity()
-    
-    success = client.publish_data("DHT22", {
-        "temperature": temp,
-        "humidity": humidity
-    }, unit="celsius")
-    
-    if success:
-        print("Data published")
-    else:
-        print("Publish failed")
-    
-    time.sleep(30)
-```
-
-**Example - Single Temperature:**
-```python
-client.publish_data("DS18B20", {
-    "temperature": 25.5
+client.publish_data("DHT22", {
+    "temperature": 22.5,
+    "humidity": 65.3
 }, unit="celsius")
 ```
 
@@ -266,32 +218,6 @@ client.publish_data("PIR", {
     "motion": True,
     "confidence": 0.95
 })
-```
-
-### `publish_raw(topic, payload, qos=1, retain=False)`
-
-Publish raw message to arbitrary topic (advanced use case).
-
-```python
-publish_raw(topic: str, payload: str, qos: int = 1, retain: bool = False) -> bool
-```
-
-**Parameters:**
-- `topic` (str): MQTT topic
-- `payload` (str): Message payload (string)
-- `qos` (int): Quality of Service (0, 1, or 2)
-- `retain` (bool): Whether broker should retain message
-
-**Returns:**
-- `True` if published successfully
-- `False` if publish failed
-
-**Warning:** Use this only for custom topics. For standard device communication, use `publish_data()`, `publish_event()`, etc.
-
-**Example:**
-```python
-# Custom topic (not part of standard protocol)
-client.publish_raw("devices/custom/metric", "42", qos=0)
 ```
 
 ---
@@ -334,7 +260,6 @@ def handle_config(payload):
     
     # Apply configuration
     new_interval = payload['payload'].get('heartbeat_interval', 60)
-    config['heartbeat_interval'] = new_interval
     
     # Acknowledge success
     client.acknowledge_command(payload['command_id'], "success")
@@ -348,30 +273,9 @@ def handle_action(payload):
     
     if action.get('type') == 'toggle_relay':
         relay.value(1 - relay.value())
-        client.acknowledge_command(payload['command_id'], "success", "Relay toggled")
+        client.acknowledge_command(payload['command_id'], "success")
     else:
         client.acknowledge_command(payload['command_id'], "failed", "Unknown action")
-```
-
-**Example - Multiple Command Types:**
-```python
-@client.on_command("config")
-def on_config(payload):
-    print(f"Config: {payload}")
-    client.acknowledge_command(payload['command_id'], "success")
-
-@client.on_command("action")
-def on_action(payload):
-    print(f"Action: {payload}")
-    client.acknowledge_command(payload['command_id'], "success")
-
-@client.on_command("restart")
-def on_restart(payload):
-    print("Restarting device...")
-    client.acknowledge_command(payload['command_id'], "success")
-    # Perform restart
-    import machine
-    machine.reset()
 ```
 
 ### `acknowledge_command(command_id, status, message="")`
@@ -492,22 +396,6 @@ device_id = client.get_device_id()
 print(f"This device is: {device_id}")
 ```
 
-### `get_heartbeat_interval()`
-
-Get configured heartbeat interval in seconds.
-
-```python
-get_heartbeat_interval() -> int
-```
-
-**Returns:** Interval in seconds
-
-**Example:**
-```python
-interval = client.get_heartbeat_interval()
-print(f"Sending heartbeat every {interval} seconds")
-```
-
 ---
 
 ## Event Publishing
@@ -546,7 +434,7 @@ def read_sensor():
         client.publish_event(
             event_type="error",
             event_code="SENSOR_TIMEOUT",
-            message="DHT22 sensor did not respond within timeout period",
+            message="DHT22 sensor did not respond",
             severity="warning"
         )
         return None
@@ -563,51 +451,9 @@ if free_mem < 10000:  # Less than 10KB
     client.publish_event(
         event_type="warning",
         event_code="MEMORY_LOW",
-        message=f"Only {free_mem} bytes of free memory",
+        message=f"Only {free_mem} bytes free",
         severity="warning"
     )
-```
-
-**Example - Connection Error:**
-```python
-try:
-    client.connect()
-except Exception as e:
-    client.publish_event(
-        event_type="error",
-        event_code="CONNECTION_FAILED",
-        message=f"Could not connect to MQTT broker: {str(e)}",
-        severity="error"
-    )
-```
-
-### `publish_status()`
-
-Manually publish device status to hub.
-
-```python
-publish_status(status: str = "online", message: str = "") -> bool
-```
-
-**Parameters:**
-- `status` (str): "online" or "offline" (default: "online")
-- `message` (str, optional): Additional status message
-
-**Returns:**
-- `True` if published successfully
-- `False` if publish failed
-
-**QoS:** 1 (At Least Once)
-**Retained:** Yes
-
-**Topic:** `hub/devices/{device_id}/status`
-
-**Note:** Called automatically on connect/disconnect. Manual call rarely needed.
-
-**Example:**
-```python
-# Publish custom status message
-client.publish_status("online", "Device ready and operational")
 ```
 
 ---
@@ -659,27 +505,6 @@ def on_disconnected():
     print("Attempting to reconnect...")
 ```
 
-### `on_message(callback)`
-
-Register callback for any received MQTT message.
-
-```python
-on_message(callback: callable) -> None
-```
-
-**Callback Signature:**
-```python
-def on_message(topic: str, payload: bytes) -> None:
-    pass
-```
-
-**Example:**
-```python
-@client.on_message
-def on_any_message(topic, payload):
-    print(f"Received on {topic}: {payload.decode()}")
-```
-
 ### `set_heartbeat_callback(callback)`
 
 Override default heartbeat data with custom callback.
@@ -718,54 +543,14 @@ client.set_heartbeat_callback(enhanced_heartbeat)
 
 ## Error Handling
 
-### Exception Hierarchy
+### Exception Types
 
 ```
-Exception
-â”œâ”€â”€ PicoSwarmException (base)
-â”‚   â”œâ”€â”€ ConnectionError
-â”‚   â”œâ”€â”€ ConfigurationError
-â”‚   â”œâ”€â”€ MessageError
-â”‚   â””â”€â”€ TimeoutError
-```
-
-### Common Exceptions
-
-#### `ConnectionError`
-
-Raised when connection to WiFi or MQTT fails.
-
-**Example:**
-```python
-try:
-    client.connect()
-except ConnectionError as e:
-    print(f"Connection failed: {e}")
-    # Handle connection failure
-```
-
-#### `ConfigurationError`
-
-Raised when configuration is invalid.
-
-**Example:**
-```python
-try:
-    client = PicoSwarmClient(config_file="invalid.json")
-except ConfigurationError as e:
-    print(f"Config error: {e}")
-```
-
-#### `MessageError`
-
-Raised when message formatting or publishing fails.
-
-**Example:**
-```python
-try:
-    client.publish_data("sensor", {"invalid": object()})
-except MessageError as e:
-    print(f"Message error: {e}")
+PicoSwarmException (base for all library exceptions)
+  +-- ConnectionError
+  +-- ConfigurationError
+  +-- MessageError
+  +-- TimeoutError
 ```
 
 ### Error Handling Best Practices
@@ -821,7 +606,7 @@ get_device_status() -> dict
 **Example:**
 ```python
 status = client.get_device_status()
-print(f"Device {status['device_id']} has been running for {status['uptime_seconds']} seconds")
+print(f"Uptime: {status['uptime_seconds']} seconds")
 ```
 
 ### `get_connection_stats()`
@@ -848,29 +633,7 @@ get_connection_stats() -> dict
 **Example:**
 ```python
 stats = client.get_connection_stats()
-print(f"Sent {stats['messages_sent']} messages")
-print(f"Reconnected {stats['reconnect_count']} times")
-```
-
-### `force_reconnect()`
-
-Force immediate reconnection to MQTT broker (with delay reset).
-
-```python
-force_reconnect() -> bool
-```
-
-**Returns:**
-- `True` if reconnection successful
-- `False` if failed
-
-**Example:**
-```python
-if not client.is_connected():
-    if client.force_reconnect():
-        print("Reconnected")
-    else:
-        print("Reconnection failed")
+print(f"Messages sent: {stats['messages_sent']}")
 ```
 
 ---
@@ -916,7 +679,7 @@ EVENT_CODE_INVALID_MESSAGE_FORMAT = "INVALID_MESSAGE_FORMAT"
 
 ---
 
-## Complete Example: Temperature Sensor with All Features
+## Complete Example: Temperature Sensor
 
 ```python
 from mqtt_pico_swarm import PicoSwarmClient
@@ -939,12 +702,11 @@ def on_connected():
 
 @client.on_disconnect
 def on_disconnected():
-    print("Lost connection to MQTT hub, attempting to reconnect...")
+    print("Lost connection, attempting to reconnect...")
 
 # Command handlers
 @client.on_command("config")
 def handle_config(payload):
-    print(f"Received config: {payload['payload']}")
     try:
         interval = payload['payload'].get('heartbeat_interval', 60)
         client.update_config({"heartbeat_interval": interval})
@@ -970,11 +732,10 @@ def handle_action(payload):
 def main():
     # Connect
     if not client.connect():
-        client.publish_event("error", "CONNECTION_FAILED", "Could not connect to hub", "error")
+        client.publish_event("error", "CONNECTION_FAILED", "Could not connect", "error")
         return
 
     # Override heartbeat with custom data
-    @client.set_heartbeat_callback
     def custom_heartbeat():
         return {
             "uptime_seconds": time.time(),
@@ -982,17 +743,18 @@ def main():
             "error_count": 0
         }
 
-    # Publish initial event
-    client.publish_event("info", "DEVICE_STARTED", "Temperature sensor initialized", "info")
+    client.set_heartbeat_callback(custom_heartbeat)
+
+    # Publish startup event
+    client.publish_event("info", "DEVICE_STARTED", "Sensor initialized", "info")
 
     # Main loop
-    read_count = 0
     try:
-        client.start()  # This blocks
+        client.start()
     except KeyboardInterrupt:
         print("Shutting down...")
     finally:
-        client.publish_event("info", "DEVICE_SHUTDOWN", "Device shutting down gracefully", "info")
+        client.publish_event("info", "DEVICE_SHUTDOWN", "Device shutting down", "info")
         client.disconnect()
 
 if __name__ == "__main__":
@@ -1001,16 +763,8 @@ if __name__ == "__main__":
 
 ---
 
-## API Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | 2025-11-05 | Initial API documentation |
-
----
-
 ## See Also
 
-- [README.md](../README.md) - Project overview and quick start
+- [README.md](../README.md) - Project overview
 - [PROTOCOL.md](PROTOCOL.md) - MQTT protocol specification
-- [SETUP.md](SETUP.md) - Detailed setup instructions
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System design
