@@ -13,7 +13,7 @@
 ### Key Features
 
 - **Simple API**: High-level methods for sending and receiving messages according to a standardized protocol
-- **Automatic Reconnection**: Robust WiFi and MQTT connection handling with exponential backoff
+- **Automatic Reconnection**: Robust WiFi and MQTT connection handling with exponential backoff (powered by umqtt.robust2)
 - **Heartbeat Management**: Built-in periodic heartbeat mechanism for device monitoring
 - **Configuration Management**: Easy device configuration with JSON-based config files
 - **Protocol Compliance**: Implements a well-defined MQTT communication protocol (see [PROTOCOL.md](docs/PROTOCOL.md))
@@ -23,7 +23,7 @@
 
 ### Use Cases
 
-- IoT sensor networks with centralized monitoring
+- IoT sensor networks with centralized monitoring (up to ~100 devices)
 - Distributed device management systems
 - Home automation with multiple Pico W nodes
 - Industrial monitoring and control systems
@@ -32,7 +32,7 @@
 ## Architecture
 
 ```
-MQTT Broker (e.g., Mosquitto)
+MQTT Broker (e.g., Mosquitto on Hub)
             |
             |
     +-------+--------+
@@ -50,27 +50,33 @@ This library handles the **client-side** communication for Raspberry Pi Pico W d
 
 ### Prerequisites
 
-- Raspberry Pi Pico W with MicroPython firmware
-- Access to an MQTT broker (Mosquitto, HiveMQ, etc.)
+- Raspberry Pi Pico W with MicroPython firmware (1.20+)
+- Access to an MQTT broker (Mosquitto, HiveMQ, etc.) - typically on the hub
 - WiFi network credentials
 
 ### Installation
 
-1. **Clone the repository:**
+1. **Install MicroPython on Pico W** (if not already installed):
+   - Download from https://micropython.org/download/rp2-pico-w/
+   - Use `rshell` or Thonny IDE to flash
+
+2. **Install library dependencies**:
 ```bash
-git clone https://github.com/yourusername/mqtt-pico-swarm.git
-cd mqtt-pico-swarm
+# Using mpremote or rshell
+micropython -m upip install micropython-umqtt.robust2
+
+# Or manually copy umqtt files to Pico W filesystem
 ```
 
-2. **Copy library files to your Pico W:**
+3. **Copy library files to your Pico W**:
 ```bash
 # Using mpremote (recommended)
 mpremote connect /dev/ttyACM0 cp -r src/ :
 
-# Or using Thonny IDE, upload the src/ folder to your Pico W
+# Or using Thonny IDE, upload the src/ folder
 ```
 
-3. **Create a configuration file** (`config.json` on your Pico W):
+4. **Create a configuration file** (`config.json` on your Pico W):
 ```json
 {
   "device_id": "pico-001",
@@ -178,33 +184,36 @@ Update device configuration and save to file.
 ```
 mqtt-pico-swarm/
 |
-+-- src/                      # Library source code
-|   +-- mqtt_pico_swarm.py    # Main client class
-|   +-- config_manager.py     # Configuration handling
-|   +-- connection_manager.py # WiFi/MQTT connection management
-|   +-- message_builder.py    # Protocol message formatting
-|   +-- utils.py              # Utility functions
++-- src/
+|   +-- mqtt_pico_swarm.py       # Main client class
+|   +-- config_manager.py        # Configuration handling
+|   +-- connection_manager.py    # WiFi/MQTT management
+|   +-- message_builder.py       # Protocol messaging
+|   +-- command_handler.py       # Command dispatch
+|   +-- mqtt_adapter.py          # umqtt.robust2 wrapper
+|   +-- errors.py                # Custom exceptions
+|   +-- constants.py             # Constants
+|   +-- utils.py                 # Utilities
 |
-+-- examples/                 # Example applications
++-- examples/
 |   +-- basic_example.py
 |   +-- temperature_sensor.py
 |   +-- motion_detector.py
 |   +-- relay_controller.py
 |
-+-- docs/                     # Documentation
-|   +-- PROTOCOL.md           # MQTT protocol specification
-|   +-- SETUP.md              # Setup instructions
-|   +-- API.md                # Detailed API documentation
-|   +-- ARCHITECTURE.md       # System architecture
++-- docs/
+|   +-- PROTOCOL.md              # MQTT protocol spec
+|   +-- API.md                   # Detailed API docs
+|   +-- ARCHITECTURE.md          # System design
+|   +-- SETUP.md                 # Setup guide
 |
-+-- tests/                    # Unit tests
-|   +-- test_client.py
++-- tests/
 |   +-- test_message_builder.py
+|   +-- test_config_manager.py
 |
-+-- README.md                 # This file
-+-- LICENSE                   # MIT License
-+-- requirements.txt          # MicroPython dependencies
-+-- .gitignore
++-- README.md
++-- LICENSE
++-- requirements.txt
 ```
 
 ## Configuration
@@ -240,17 +249,6 @@ The library uses a JSON configuration file stored on the Pico W filesystem. Here
 }
 ```
 
-### Environment-Specific Configuration
-
-For different environments (development, production), you can maintain multiple config files:
-- `config.dev.json`
-- `config.prod.json`
-
-Then specify which to use:
-```python
-client = PicoSwarmClient(config_file="config.prod.json")
-```
-
 ## Protocol
 
 This library implements a standardized MQTT protocol for device-to-hub communication. The protocol defines:
@@ -263,213 +261,36 @@ This library implements a standardized MQTT protocol for device-to-hub communica
 
 For complete protocol specification, see [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
-### Protocol Highlights
-
-**Topics Used:**
-- `hub/devices/{device_id}/status` - Device online/offline status
-- `hub/devices/{device_id}/heartbeat` - Periodic heartbeat
-- `hub/devices/{device_id}/data` - Sensor/event data
-- `hub/devices/{device_id}/events` - Error and warning events
-- `hub/devices/{device_id}/commands/#` - Incoming commands from hub
-
-**Message Types:**
-1. Status messages (retained)
-2. Heartbeat messages (QoS 0)
-3. Data messages (QoS 1)
-4. Event messages (QoS 1)
-5. Command acknowledgments (QoS 1)
-
 ## Examples
 
-### Temperature Sensor with DHT22
+See the `examples/` directory for complete, working examples:
 
-```python
-from mqtt_pico_swarm import PicoSwarmClient
-from machine import Pin
-import dht
-import time
+- **basic_example.py** - Minimal setup and operation
+- **temperature_sensor.py** - DHT22 temperature/humidity sensor
+- **motion_detector.py** - PIR motion sensor with commands
+- **relay_controller.py** - Relay control via hub commands
 
-# Initialize DHT22 sensor
-sensor = dht.DHT22(Pin(15))
+## Dependencies
 
-# Initialize MQTT client
-client = PicoSwarmClient(config_file="config.json")
-client.connect()
+### Runtime Dependencies
 
-def read_and_publish():
-    try:
-        sensor.measure()
-        temp = sensor.temperature()
-        humidity = sensor.humidity()
-        
-        # Publish sensor data
-        client.publish_data("DHT22", {
-            "temperature": temp,
-            "humidity": humidity
-        }, unit="celsius")
-        
-    except Exception as e:
-        # Publish error event
-        client.publish_event("error", "SENSOR_READ_FAILED", str(e), "warning")
+- **umqtt.robust2** - MicroPython MQTT client with robust reconnection
+- **MicroPython standard library** - network, json, time, gc, machine
 
-# Read and publish every 10 seconds
-client.start()
-while True:
-    read_and_publish()
-    time.sleep(10)
-```
-
-### Motion Detector with Command Handling
-
-```python
-from mqtt_pico_swarm import PicoSwarmClient
-from machine import Pin
-import time
-
-# Initialize PIR sensor
-pir = Pin(16, Pin.IN)
-motion_detected = False
-
-# Initialize MQTT client
-client = PicoSwarmClient(config_file="config.json")
-client.connect()
-
-# Handle configuration commands
-@client.on_command("config")
-def handle_config(payload):
-    print(f"Configuration update: {payload}")
-    # Update settings based on payload
-    client.acknowledge_command(payload["command_id"], "success")
-
-# Handle action commands
-@client.on_command("action")
-def handle_action(payload):
-    action = payload["payload"].get("action")
-    if action == "trigger_test":
-        # Simulate motion detection
-        client.publish_data("PIR", {"motion": True})
-        client.acknowledge_command(payload["command_id"], "success")
-
-# Monitor PIR sensor
-client.start()
-while True:
-    if pir.value() == 1 and not motion_detected:
-        motion_detected = True
-        client.publish_data("PIR", {"motion": True})
-    elif pir.value() == 0 and motion_detected:
-        motion_detected = False
-        client.publish_data("PIR", {"motion": False})
-    
-    time.sleep(0.1)
-```
-
-### Relay Controller
-
-```python
-from mqtt_pico_swarm import PicoSwarmClient
-from machine import Pin
-import time
-
-# Initialize relay
-relay = Pin(17, Pin.OUT)
-relay.value(0)  # Start OFF
-
-# Initialize MQTT client
-client = PicoSwarmClient(config_file="config.json")
-client.connect()
-
-# Handle relay control commands
-@client.on_command("action")
-def handle_relay_command(payload):
-    action = payload["payload"]
-    
-    if "relay_id" in action and action["relay_id"] == 1:
-        state = action.get("state", "off")
-        
-        if state == "on":
-            relay.value(1)
-            client.acknowledge_command(payload["command_id"], "success", "Relay turned ON")
-        elif state == "off":
-            relay.value(0)
-            client.acknowledge_command(payload["command_id"], "success", "Relay turned OFF")
-        else:
-            client.acknowledge_command(payload["command_id"], "failed", "Invalid state")
-
-client.start()
-
-# Keep running
-while True:
-    time.sleep(1)
-```
-
-## Advanced Features
-
-### Custom Heartbeat Logic
-
-You can override the default heartbeat behavior:
-
-```python
-client = PicoSwarmClient(config_file="config.json")
-
-def custom_heartbeat():
-    # Add custom data to heartbeat
-    return {
-        "uptime_seconds": time.time(),
-        "memory_free": gc.mem_free(),
-        "custom_metric": read_custom_sensor()
-    }
-
-client.set_heartbeat_callback(custom_heartbeat)
-client.connect()
-client.start()
-```
-
-### Handling Connection Loss
-
-The library automatically handles WiFi and MQTT disconnections with exponential backoff:
-
-```python
-client = PicoSwarmClient(config_file="config.json")
-
-# Register callback for connection events
-@client.on_connect
-def on_connected():
-    print("Successfully connected to MQTT broker")
-
-@client.on_disconnect
-def on_disconnected():
-    print("Disconnected from MQTT broker. Reconnecting...")
-
-client.connect()
-client.start()
-```
-
-### Error Reporting
-
-Automatically report errors to the hub:
-
-```python
-try:
-    # Your application logic
-    result = risky_operation()
-except Exception as e:
-    client.publish_event(
-        event_type="error",
-        event_code="OPERATION_FAILED",
-        message=str(e),
-        severity="error"
-    )
-```
-
-## Testing
-
-Run the test suite (requires `unittest` on desktop Python):
+### Installation
 
 ```bash
-python -m unittest discover tests/
+# Install MicroPython packages
+micropython -m upip install micropython-umqtt.robust2
 ```
 
-For on-device testing, use the examples in `examples/test_*.py`.
+## Performance
+
+- **Memory footprint**: ~15-20 KB (library + buffers)
+- **Heartbeat overhead**: ~100 bytes per message
+- **Data message size**: Typically 200-500 bytes for sensor data
+- **Connection time**: ~3-5 seconds (WiFi + MQTT)
+- **Reconnection time**: 5-30 seconds (with exponential backoff)
 
 ## Troubleshooting
 
@@ -482,35 +303,20 @@ For on-device testing, use the examples in `examples/test_*.py`.
 
 **Problem:** Cannot connect to MQTT broker
 - Verify broker IP address and port
-- Check that broker allows anonymous connections (or configure credentials)
+- Check that broker allows anonymous connections
 - Test broker with `mosquitto_sub` command line tool
 
-### Message Issues
-
-**Problem:** Messages not appearing on hub
-- Check topic structure matches protocol
-- Verify QoS levels
-- Use MQTT Explorer to monitor topics
-
-**Problem:** Commands not received
-- Ensure device is subscribed to correct command topics
-- Check command callback is registered
-- Verify command JSON format
+**Problem:** Device goes offline frequently
+- Check WiFi signal strength
+- Increase `keepalive` value in config
+- Check hub connectivity and network stability
 
 ### Memory Issues
 
 **Problem:** Out of memory errors
-- Reduce heartbeat frequency
-- Clear buffers after sending large messages
-- Use `gc.collect()` periodically
-
-## Performance
-
-- **Memory footprint**: ~15-20 KB (library only)
-- **Heartbeat overhead**: ~100 bytes per message (QoS 0)
-- **Data message size**: Varies (typically 200-500 bytes for sensor data)
-- **Connection time**: ~3-5 seconds (WiFi + MQTT)
-- **Reconnection time**: 5-30 seconds (with exponential backoff)
+- Reduce `heartbeat_interval` to send fewer messages
+- Reduce sensor data payload size
+- Call `gc.collect()` periodically after sending messages
 
 ## Contributing
 
@@ -522,38 +328,32 @@ Contributions are welcome! Please follow these guidelines:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-Please ensure:
-- Code follows MicroPython best practices
-- All tests pass
-- Documentation is updated
-- Examples are provided for new features
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-- Built on top of `umqtt.robust` MicroPython MQTT library
+- Built on top of **umqtt.robust2** MicroPython MQTT library
 - Inspired by the Raspberry Pi Pico W community
 - Protocol design based on MQTT 5.0 specification
 
 ## Support
 
 - **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/mqtt-pico-swarm/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/mqtt-pico-swarm/discussions)
+- **Issues**: GitHub Issues
+- **Discussions**: GitHub Discussions
 
 ## Roadmap
 
 - [ ] TLS/SSL support for secure connections
-- [ ] MQTT 5.0 feature support (user properties, request/response)
+- [ ] MQTT 5.0 advanced features
 - [ ] OTA (Over-The-Air) firmware updates
+- [ ] Message compression
 - [ ] Web-based configuration interface
-- [ ] Multi-sensor data batching
 - [ ] Power saving modes for battery-powered devices
-- [ ] Integration examples for popular sensors (BME280, DS18B20, etc.)
+- [ ] Integration examples for popular sensors
 
 ---
 
-**Made with â¤ï¸ for the Raspberry Pi Pico W community**
+**Made with care for the Raspberry Pi Pico W community**
