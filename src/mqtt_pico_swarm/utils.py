@@ -12,6 +12,11 @@ try:
 except ImportError:  # pragma: no cover - desktop mocks might not provide gc
     gc = None
 
+try:
+    import network  # type: ignore
+except ImportError:  # pragma: no cover - network module unavailable on host
+    network = None
+
 
 RFC3339_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -79,3 +84,25 @@ def log(debug_enabled, message):
     """Print message when debugging is enabled."""
     if debug_enabled:
         print("[PicoSwarm] " + message)
+
+
+def is_network_available():
+    """Return True if WiFi interface is active and connected.
+
+    Desktop testmiljö kan sakna ``network``-modulen; i dessa fall antar vi att
+    nätverket är tillgängligt för att inte blockera enhetstester.
+    """
+    if network is None:
+        return True
+
+    try:
+        if hasattr(network, "WLAN") and hasattr(network, "STA_IF"):
+            wlan = network.WLAN(network.STA_IF)
+            if hasattr(wlan, "isconnected"):
+                return bool(wlan.isconnected())
+    except Exception:
+        # Om nätverksmodulen existerar men rapporterar fel, betraktar vi
+        # gränssnittet som otillgängligt.
+        return False
+
+    return True

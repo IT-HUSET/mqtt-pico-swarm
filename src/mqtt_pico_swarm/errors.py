@@ -19,3 +19,7 @@ class MessageError(PicoSwarmException):
 
 class TimeoutError(PicoSwarmException):
     """Raised when an operation exceeds the allowed time budget."""
+
+
+class NetworkUnavailableError(PicoSwarmException):
+    """Raised when the network interface is not connected."""

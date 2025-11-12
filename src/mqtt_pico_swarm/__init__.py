@@ -9,7 +9,11 @@ __author__ = "IT-HUSET i Uppsala"
 __license__ = "MIT"
 
 # Public API exports
-from .client import PicoSwarmClient
+try:
+    from .client import PicoSwarmClient  # TODO: implementeras senare
+except ImportError:  # PicoSwarmClient inte klar ännu
+    PicoSwarmClient = None
+
 from .errors import (
     PicoSwarmException,
     ConnectionError,
@@ -28,7 +32,6 @@ from .constants import (
 
 # Expose main API
 __all__ = [
-    "PicoSwarmClient",
     "PicoSwarmException",
     "ConnectionError",
     "ConfigurationError",
@@ -41,3 +44,6 @@ __all__ = [
     "EVENT_TYPE_WARNING",
     "EVENT_TYPE_INFO"
 ]
+
+if PicoSwarmClient is not None:
+    __all__.append("PicoSwarmClient")
