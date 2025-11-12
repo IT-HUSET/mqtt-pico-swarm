@@ -10,27 +10,17 @@
 
 **MQTT Pico Swarm** provides the client-side building blocks for Pico W nodes that talk to an MQTT hub. The library focuses on MQTT only—WiFi handling lives in your own bootstrap code—so you can reuse the same components on the hub, in simulations, and during desktop testing.
 
-```mermaid
-graph TD
-    subgraph Device["Device (Pico W)"]
-        CFG[ConfigManager]
-        CLI[PicoSwarmClient]
-        CON[ConnectionManager]
-        MSG[MessageBuilder]
-        CMD[CommandHandler]
-        MQT[MQTTAdapter]
-    end
-
-    CFG --> CLI
-    CLI --> CON
-    CLI --> CMD
-    CLI --> MSG
-    CON --> MQT
-    CMD --> CLI
-    MQT -->|MQTT topics| HUB[(MQTT Broker / Hub)]
+```text
+Device (Pico W)
+  ├─ ConfigManager ─┐
+  ├─ CommandHandler ┤
+  ├─ MessageBuilder ┤
+  └─ MQTTAdapter ◄──┴─ ConnectionManager ◄── PicoSwarmClient
+                                       │
+                                       └────── MQTT topics ──────► MQTT Broker / Hub
 ```
 
-*Figure 1: Module responsibilities and data flow inside a Pico W device.*
+*Figure 1: Modulernas ansvar och hur data flödar från klienten till MQTT-hubben.*
 
 Key goals:
 
