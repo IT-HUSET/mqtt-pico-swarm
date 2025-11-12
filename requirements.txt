@@ -1,2 +1,2 @@
-# MicroPython dependencies
-micropython-umqtt.robust2
+# MicroPython dependencies (skipped on CPython)
+micropython-umqtt.robust2; platform_python_implementation == "MicroPython"

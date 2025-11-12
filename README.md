@@ -61,6 +61,20 @@ Key goals:
 
 ## Getting started
 
+```mermaid
+graph TD
+    A[Your application code] -->|import mqtt_pico_swarm| B[PicoSwarmClient]
+    A -->|configure callbacks| C[CommandHandler]
+    A -->|publish data/events| D[MessageBuilder]
+    B --> E[ConnectionManager]
+    E --> F[MQTTAdapter]
+    F --> G[(MQTT Broker)]
+    B --> H[ConfigManager]
+    H -->|config.json| I[(Filesystem)]
+```
+
+*Figure 2: Så kopplar du in biblioteket i din egen applikation.*
+
 ### Desktop development workflow
 
 1. Clone the repo and install Python ≥3.9.
