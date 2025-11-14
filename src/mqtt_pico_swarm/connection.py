@@ -128,7 +128,8 @@ class ConnectionManager:
 
     def _subscribe_commands(self):
         for topic in self._command_handler.subscribed_topics(self._device_id):
-            self._adapter.subscribe(topic, qos=1)
+            # QoS 0 för maximal kompatibilitet med olika umqtt-versioner
+            self._adapter.subscribe(topic, qos=0)
         # Broadcast topics (if any) handled by client-level logic later
 
     def _handle_message(self, topic, payload):

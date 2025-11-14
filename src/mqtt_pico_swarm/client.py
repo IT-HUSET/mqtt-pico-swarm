@@ -52,6 +52,9 @@ class PicoSwarmClient:
         if self._connected:
             return True
 
+        # Debug-markör för att verifiera firmware-version på enheten
+        log(self._debug, "[PicoSwarm] connect() starting (client.py v1)")
+
         self._config = self._config_manager.get_config()
         self._initialise_components()
 
