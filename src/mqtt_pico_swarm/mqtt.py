@@ -1,19 +1,19 @@
-"""MQTT adapter wrapping umqtt.robust2 for Pico Swarm."""
+"""MQTT adapter wrapping umqtt.simple2 for Pico Swarm."""
 
 from .errors import ConnectionError
 
 try:
-    # Byt till umqtt.simple för bättre kompatibilitet på riktiga enheter.
-    from umqtt import simple as _umqtt_simple
+    # Byt till umqtt.simple2 för bättre kompatibilitet på riktiga enheter.
+    from umqtt import simple2 as _umqtt_module
 except ImportError:  # pragma: no cover - desktop tester ersätter fabriken
-    _umqtt_simple = None
+    _umqtt_module = None
 
 
 def _default_client_factory(client_id, server, port, user, password, keepalive, ssl, ssl_params):
-    if _umqtt_simple is None:
-        raise ConnectionError("umqtt.simple is not available")
-    # umqtt.simple.MQTTClient har signaturen (client_id, server, port=1883, user=None, password=None, keepalive=0, ssl=False)
-    return _umqtt_simple.MQTTClient(
+    if _umqtt_module is None:
+        raise ConnectionError("umqtt.simple2 is not available")
+    # umqtt.simple2.MQTTClient har signaturen (client_id, server, port=1883, user=None, password=None, keepalive=0, ssl=False)
+    return _umqtt_module.MQTTClient(
         client_id,
         server,
         port=port,
