@@ -490,6 +490,19 @@ Pico W Receives Command
 - **Purpose:** Restart the device
 - **Payload:** Empty or timestamp
 
+#### **Immediate Data Trigger**
+- **Topic:** `hub/devices/{device_id}/commands/trigger-data`
+- **QoS:** 1
+- **Purpose:** Instruct a single device to publish its current sensor data immediately, outside the normal interval.
+- **Payload:** Optional metadata from the hub (e.g. `command_id`, `requested_at`).
+  ```json
+  {
+    "command_id": "cmd-16273",
+    "requested_at": "2024-11-15T15:23:10Z"
+  }
+  ```
+- **Response:** Device publishes its standard `data` message to `hub/devices/{device_id}/data` and logs the trigger; no separate acknowledgment is required.
+
 #### **Broadcast Commands**
 - **Topic:** `hub/broadcast/config-update`
   - **QoS:** 1

@@ -45,7 +45,7 @@ Key goals:
 - **Configurable behaviour** – JSON config files managed by `ConfigManager`, including validation and safe updates.
 - **Protocol compliance** – topic helpers and payload builders ensure messages match the documented contract in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 - **Command routing** – `CommandHandler` supports type-specific callbacks plus wildcards for fleet-wide actions.
-- **Ready-to-run example** – `examples/basic/main.py` demonstrates WiFi setup, MQTT lifecycle, command handling, real temperature telemetry, and optional time synchronisation via broadcast.
+- **Ready-to-run example** – `examples/internal-temp-sensor/main.py` demonstrates WiFi setup, MQTT lifecycle, command handling, real temperature telemetry, and optional time synchronisation via broadcast.
 
 ## What's inside
 
@@ -92,9 +92,9 @@ graph TD
    ```bash
    python scripts/deploy_demo.py --port auto --install-umqtt
    ```
-   - This copies `src/mqtt_pico_swarm/`, the basic example, and installs `micropython-umqtt.simple2` under `/lib/umqtt`.
-3. Copy `examples/basic/config.json.example` to the board as `config.json` and update broker credentials.
-4. Provide WiFi credentials in `examples/basic/main.py` (or your own bootstrap module) before running the demo.
+   - This copies `src/mqtt_pico_swarm/`, the internal temperature sensor example, and installs `micropython-umqtt.simple2` under `/lib/umqtt`.
+3. Copy `examples/internal-temp-sensor/config.json.example` to the board as `config.json` and update broker credentials.
+4. Provide WiFi credentials in `examples/internal-temp-sensor/main.py` (or your own bootstrap module) before running the demo.
 
 ```python
 import network
@@ -135,7 +135,7 @@ client.publish_data("DHT22", {"temperature": 22.5, "humidity": 65.3}, unit="°C"
 client.send_heartbeat()
 ```
 
-See [examples/basic/main.py](examples/basic/main.py) for a full loop that connects WiFi, streams the Pico W’s internal temperature sensor, sends heartbeats, and acknowledges commands.
+See [examples/internal-temp-sensor/main.py](examples/internal-temp-sensor/main.py) for a full loop that connects WiFi, streams the Pico W’s internal temperature sensor, sends heartbeats, and acknowledges commands.
 
 ## Configuration
 

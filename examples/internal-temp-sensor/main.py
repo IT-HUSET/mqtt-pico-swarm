@@ -10,7 +10,7 @@ except ImportError:  # pragma: no cover - maskinmodul saknas vid lokal test
 
 from mqtt_pico_swarm import constants
 from mqtt_pico_swarm.client import PicoSwarmClient
-from mqtt_pico_swarm.constants import COMMAND_TYPE_ACTION, TOPIC_BROADCAST_TIME_SYNC
+from mqtt_pico_swarm.constants import COMMAND_TYPE_ACTION, COMMAND_TYPE_TRIGGER_DATA, TOPIC_BROADCAST_TIME_SYNC
 from mqtt_pico_swarm.errors import ConnectionError
 from mqtt_pico_swarm.utils import current_timestamp, log
 
@@ -74,6 +74,26 @@ def main():
 
     client = PicoSwarmClient(config_file=CONFIG_FILE, debug=True)
 
+    def publish_temperature_reading():
+        temperature_c = read_internal_temperature(TEMPERATURE_CALIBRATION_OFFSET)
+        temperature_c = round(temperature_c, 2)
+        _log("Mäter intern temperatur: {:.2f} °C".format(temperature_c))
+        payload = {
+            "temperature_c": temperature_c,
+            "timestamp": current_timestamp(),
+            "sensor": "pico_w_cpu",
+        }
+        client.publish_data("temperature", payload)
+        try:
+            now_rtc = time.localtime()
+            _log(
+                "Aktuell RTC-tid: {:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(
+                    now_rtc[0], now_rtc[1], now_rtc[2], now_rtc[3], now_rtc[4], now_rtc[5]
+                )
+            )
+        except Exception:
+            pass
+
     @client.on_command(COMMAND_TYPE_ACTION)
     def handle_action(command):
         _log("Mottog action-kommando: {}".format(command))
@@ -84,6 +104,17 @@ def main():
                 "success",
                 message="Åtgärd utförd på enhet",
             )
+
+    @client.on_command(COMMAND_TYPE_TRIGGER_DATA)
+    def handle_trigger_data(command):
+        command_id = None
+        if isinstance(command, dict):
+            command_id = command.get("command_id")
+        if command_id:
+            _log("Trigger-data kommando mottaget: {}".format(command_id))
+        else:
+            _log("Trigger-data kommando mottaget")
+        publish_temperature_reading()
 
     try:
         client.connect()
@@ -110,24 +141,7 @@ def main():
 
             # Publicera sensordata enligt intervall
             if now - last_publish >= PUBLISH_INTERVAL:
-                temperature_c = read_internal_temperature(TEMPERATURE_CALIBRATION_OFFSET)
-                _log("Mäter intern temperatur: {:.2f} °C".format(round(temperature_c, 2)))
-                payload = {
-                    "temperature_c": round(temperature_c, 2),
-                    "timestamp": current_timestamp(),
-                    "sensor": "pico_w_cpu",
-                }
-                client.publish_data("temperature", payload)
-                # Log current RTC time as received via broadcast if available
-                try:
-                    now_rtc = time.localtime()
-                    _log(
-                        "Aktuell RTC-tid: {:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(
-                            now_rtc[0], now_rtc[1], now_rtc[2], now_rtc[3], now_rtc[4], now_rtc[5]
-                        )
-                    )
-                except Exception:
-                    pass
+                publish_temperature_reading()
                 last_publish = now
 
             # Skicka heartbeat enligt konfigurationen

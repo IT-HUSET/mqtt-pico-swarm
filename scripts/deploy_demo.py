@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Upload the basic Pico demo to a connected Pico W using mpremote."""
+"""Upload the internal temperature sensor demo to a connected Pico W using mpremote."""
 
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_SRC = REPO_ROOT / "src" / "mqtt_pico_swarm"
-DEMO_MAIN = REPO_ROOT / "examples" / "basic" / "main.py"
-DEMO_CONFIG = REPO_ROOT / "examples" / "basic" / "config.json"
+DEMO_MAIN = REPO_ROOT / "examples" / "internal-temp-sensor" / "main.py"
+DEMO_CONFIG = REPO_ROOT / "examples" / "internal-temp-sensor" / "config.json"
 UMQTT_PACKAGE = "micropython-umqtt.simple2"
 
 

@@ -5,7 +5,7 @@ This directory contains runnable examples that demonstrate how to use the
 
 ## Structure
 
-- `basic/`
+- `internal-temp-sensor/`
   - `config.json.example` – sample configuration file that can be copied to
     `config.json` and updated with your broker credentials.
   - `main.py` – MicroPython entry point showing hur du kopplar upp WiFi,
