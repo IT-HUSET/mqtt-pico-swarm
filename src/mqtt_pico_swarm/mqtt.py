@@ -1,6 +1,6 @@
 """MQTT adapter wrapping umqtt.simple2 for Pico Swarm."""
 
-from .errors import ConnectionError
+from .errors import ConnectionError as PicoConnectionError
 from .utils import log
 
 try:
@@ -12,7 +12,7 @@ except ImportError:  # pragma: no cover - desktop tester ersätter fabriken
 
 def _default_client_factory(client_id, server, port, user, password, keepalive, ssl, ssl_params):
     if _umqtt_module is None:
-        raise ConnectionError("umqtt.simple2 is not available")
+        raise PicoConnectionError("umqtt.simple2 is not available")
     # umqtt.simple2.MQTTClient har signaturen (client_id, server, port=1883, user=None, password=None, keepalive=0, ssl=False)
     return _umqtt_module.MQTTClient(
         client_id,
@@ -90,7 +90,7 @@ class MQTTAdapter:
                 )
             except Exception as error:
                 log(True, "Failed to create MQTT client: {}".format(error), prefix="[MQTTAdapter]")
-                raise ConnectionError("Failed to create MQTT client") from error
+                raise PicoConnectionError("Failed to create MQTT client") from error
 
         if last_will:
             self._last_will = (
@@ -111,7 +111,7 @@ class MQTTAdapter:
             self._connected = True
         except Exception as error:
             self._connected = False
-            raise ConnectionError("Failed to connect to MQTT broker") from error
+            raise PicoConnectionError("Failed to connect to MQTT broker") from error
 
     def disconnect(self):
         if self._client is None:
@@ -119,7 +119,7 @@ class MQTTAdapter:
         try:
             self._client.disconnect()
         except Exception as error:
-            raise ConnectionError("Failed to disconnect MQTT client") from error
+            raise PicoConnectionError("Failed to disconnect MQTT client") from error
         finally:
             self._connected = False
 
@@ -134,21 +134,21 @@ class MQTTAdapter:
         topic = self._topic_to_bytes(topic)
         payload = self._payload_to_bytes(payload)
         topic_display = topic.decode("utf-8") if isinstance(topic, (bytes, bytearray)) else str(topic)
-        # Debug-markör för version på enheten
-        log(True, "publish simple2 {}".format(topic_display), prefix="[MQTTAdapter]")
+        # Debug-markör för att visa vilken topic som publiceras
+        log(True, "Publishing to {}".format(topic_display), prefix="[MQTTAdapter]")
         try:
             # Anropa med retain/qos så att QoS 1 fungerar korrekt
             self._client.publish(topic, payload, retain=retain, qos=qos)
         except Exception as error:
             self._connected = False
-            raise ConnectionError("Failed to publish message: {!r}".format(error)) from error
+            raise PicoConnectionError("Failed to publish message: {!r}".format(error)) from error
 
     def subscribe(self, topic, qos=0):
         self._ensure_client()
         topic = self._topic_to_bytes(topic)
         topic_display = topic.decode("utf-8") if isinstance(topic, (bytes, bytearray)) else str(topic)
-        # Debug-markör för version på enheten
-        log(True, "subscribe simple2 {}".format(topic_display), prefix="[MQTTAdapter]")
+        # Debug-markör för att visa vilken topic som prenumereras
+        log(True, "Subscribing to {}".format(topic_display), prefix="[MQTTAdapter]")
         try:
             self._client.subscribe(topic, qos)
         except AttributeError:
@@ -159,7 +159,7 @@ class MQTTAdapter:
             return
         except Exception as error:
             self._connected = False
-            raise ConnectionError("Failed to subscribe to topic") from error
+            raise PicoConnectionError("Failed to subscribe to topic") from error
 
     def wait_message(self):
         self._ensure_client()
@@ -167,7 +167,7 @@ class MQTTAdapter:
             self._client.wait_msg()
         except Exception as error:
             self._connected = False
-            raise ConnectionError("Failed while waiting for message: {!r}".format(error)) from error
+            raise PicoConnectionError("Failed while waiting for message: {!r}".format(error)) from error
 
     def check_message(self):
         self._ensure_client()
@@ -175,7 +175,7 @@ class MQTTAdapter:
             self._client.check_msg()
         except Exception as error:
             self._connected = False
-            raise ConnectionError("Failed while checking messages: {!r}".format(error)) from error
+            raise PicoConnectionError("Failed while checking messages: {!r}".format(error)) from error
 
     def set_last_will(self, topic, payload, retain=False, qos=0):
         self._ensure_client(create=False)
@@ -185,7 +185,7 @@ class MQTTAdapter:
         try:
             self._client.set_last_will(topic, payload, retain=retain, qos=qos)
         except Exception as error:
-            raise ConnectionError("Failed to set last will") from error
+            raise PicoConnectionError("Failed to set last will") from error
 
     def is_connected(self):
         return self._connected
@@ -194,7 +194,7 @@ class MQTTAdapter:
         if self._client is None:
             if not create:
                 return
-            raise ConnectionError("MQTT client not created")
+            raise PicoConnectionError("MQTT client not created")
 
     def _handle_message(self, topic, msg, retained=False, dup=False):
         if isinstance(topic, bytes):
