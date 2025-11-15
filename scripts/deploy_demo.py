@@ -18,10 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_SRC = REPO_ROOT / "src" / "mqtt_pico_swarm"
 DEMO_MAIN = REPO_ROOT / "examples" / "basic" / "main.py"
 DEMO_CONFIG = REPO_ROOT / "examples" / "basic" / "config.json"
-UMQTT_PACKAGES = (
-    "micropython-umqtt.robust2",
-    "micropython-umqtt.simple",
-)
+UMQTT_PACKAGE = "micropython-umqtt.simple2"
 
 
 def _ensure_paths_exist() -> None:
@@ -105,42 +102,21 @@ def _download_and_extract(package_name: str, tmpdir: Path) -> Path:
 
 
 def _install_umqtt(port: str) -> None:
-    print("Installerar micropython-umqtt.robust2 + simple på enheten...")
+    print("Installerar micropython-umqtt.simple2 på enheten...")
     with tempfile.TemporaryDirectory() as tmpdir_str:
         tmpdir = Path(tmpdir_str)
-        extracted = {
-            name: _download_and_extract(name, tmpdir) for name in UMQTT_PACKAGES
-        }
+        package_root = _download_and_extract(UMQTT_PACKAGE, tmpdir)
+        umqtt_dir = package_root / "umqtt"
 
-        robust_root = extracted["micropython-umqtt.robust2"] / "umqtt"
-        simple_root = extracted["micropython-umqtt.simple"] / "umqtt"
-
-        init_file = robust_root / "__init__.py"
-        robust2_file = robust_root / "robust2.py"
-        simple_file = simple_root / "simple.py"
-
-        for label, path in (
-            ("__init__", init_file),
-            ("robust2", robust2_file),
-            ("simple", simple_file),
-        ):
-            if not path.exists():
-                raise SystemExit(
-                    f"Saknar filen {path.name} i paketet för umqtt ({label})."
-                )
+        if not umqtt_dir.exists():
+            raise SystemExit(
+                "Hittade ingen katalog 'umqtt' i paketet micropython-umqtt.simple2."
+            )
 
         _run_mpremote(port, "fs", "mkdir", "lib", check=False)
         _run_mpremote(port, "fs", "mkdir", "lib/umqtt", check=False)
-        _run_mpremote(port, "cp", str(init_file), ":/lib/umqtt/__init__.py")
-        _run_mpremote(port, "cp", str(robust2_file), ":/lib/umqtt/robust2.py")
-        _run_mpremote(port, "cp", str(simple_file), ":/lib/umqtt/simple.py")
-        # Skapa enkel shim för umqtt.simple2 som vissa versioner av robust2 importerar
-        shim_code = "from .simple import MQTTClient\n"
-        with tempfile.NamedTemporaryFile("w", delete=False) as shim:
-            shim.write(shim_code)
-            shim_path = Path(shim.name)
-        _run_mpremote(port, "cp", str(shim_path), ":/lib/umqtt/simple2.py")
-        print("umqtt.robust2 installerad (inkl. simple2-shim).")
+        _run_mpremote(port, "cp", "-r", str(umqtt_dir), ":/lib/")
+        print("umqtt.simple2 installerad.")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -159,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--install-umqtt",
         action="store_true",
-        help="Hämta och installera micropython-umqtt.robust2 på Pico W",
+        help="Hämta och installera micropython-umqtt.simple2 på Pico W",
     )
     args = parser.parse_args(argv)
 

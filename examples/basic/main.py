@@ -3,15 +3,27 @@ import time
 
 import network
 
+try:
+    import machine
+except ImportError:  # pragma: no cover - maskinmodul saknas vid lokal test
+    machine = None
+
 from mqtt_pico_swarm import constants
 from mqtt_pico_swarm.client import PicoSwarmClient
 from mqtt_pico_swarm.constants import COMMAND_TYPE_ACTION
 from mqtt_pico_swarm.errors import ConnectionError
+from mqtt_pico_swarm.utils import current_timestamp
 
 CONFIG_FILE = "config.json"
 NETWORK_SSID = "kumliens"
-NETWORK_PASSWORD = "uVnwt.A9JzhH"
+NETWORK_PASSWORD = "xxx"
 PUBLISH_INTERVAL = 60
+TEMPERATURE_CALIBRATION_OFFSET = 0.0  # Justera vid behov för att kalibrera mot extern termometer
+
+if machine is not None:
+    _temperature_sensor = machine.ADC(4)
+else:
+    _temperature_sensor = None
 
 
 def connect_wifi(ssid, password, timeout=20):
@@ -34,6 +46,17 @@ def connect_wifi(ssid, password, timeout=20):
 def _load_config():
     with open(CONFIG_FILE, "r") as handle:
         return json.load(handle)
+
+
+def read_internal_temperature(offset=0.0):
+    if _temperature_sensor is None:
+        raise RuntimeError("Intern temperaturgivare är inte tillgänglig på denna plattform")
+    conversion_factor = 3.3 / 65535
+    raw = _temperature_sensor.read_u16()
+    voltage = raw * conversion_factor
+    # Formel från Raspberry Pi-dokumentationen för RP2040
+    temperature_c = 27 - (voltage - 0.706) / 0.001721
+    return temperature_c + offset
 
 
 def main():
@@ -83,12 +106,14 @@ def main():
 
             # Publicera sensordata enligt intervall
             if now - last_publish >= PUBLISH_INTERVAL:
+                temperature_c = read_internal_temperature(TEMPERATURE_CALIBRATION_OFFSET)
+                print("Mäter intern temperatur:", round(temperature_c, 2), "°C")
                 payload = {
-                    "temperature": 22.5,
-                    "humidity": 44.8,
-                    "timestamp": now,
+                    "temperature_c": round(temperature_c, 2),
+                    "timestamp": current_timestamp(),
+                    "sensor": "pico_w_cpu",
                 }
-                client.publish_data("environment", payload)
+                client.publish_data("temperature", payload)
                 last_publish = now
 
             # Skicka heartbeat enligt konfigurationen

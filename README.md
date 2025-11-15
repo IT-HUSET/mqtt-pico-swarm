@@ -45,7 +45,7 @@ Key goals:
 - **Configurable behaviour** – JSON config files managed by `ConfigManager`, including validation and safe updates.
 - **Protocol compliance** – topic helpers and payload builders ensure messages match the documented contract in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 - **Command routing** – `CommandHandler` supports type-specific callbacks plus wildcards for fleet-wide actions.
-- **Ready-to-run example** – `examples/basic/main.py` demonstrates WiFi setup, MQTT lifecycle, and command handling.
+- **Ready-to-run example** – `examples/basic/main.py` demonstrates WiFi setup, MQTT lifecycle, command handling, and real temperature telemetry.
 
 ## What's inside
 
@@ -88,19 +88,17 @@ graph TD
 ### Deploying to a Pico W
 
 1. Flash MicroPython 1.20+ to the board (see the [official guide](https://micropython.org/download/rp2-pico-w/)).
-2. Copy the package folder to the device:
+2. Install the library and dependencies via the helper script:
    ```bash
-   mpremote connect /dev/ttyACM0 cp -r src/mqtt_pico_swarm :/lib/
+   python scripts/deploy_demo.py --port auto --install-umqtt
    ```
-3. Install the single runtime dependency:
-   ```bash
-   mpremote connect /dev/ttyACM0 mip install micropython-umqtt.robust2
-   ```
-4. Copy `examples/basic/config.json.example` to the board, rename to `config.json`, and adjust values.
-5. Provide a WiFi bootstrap script in your project (see snippet below) before instantiating the client.
+   - This copies `src/mqtt_pico_swarm/`, the basic example, and installs `micropython-umqtt.simple2` under `/lib/umqtt`.
+3. Copy `examples/basic/config.json.example` to the board as `config.json` and update broker credentials.
+4. Provide WiFi credentials in `examples/basic/main.py` (or your own bootstrap module) before running the demo.
 
 ```python
 import network
+
 
 def connect_wifi(ssid, password, timeout=15):
     wlan = network.WLAN(network.STA_IF)
@@ -114,6 +112,8 @@ def connect_wifi(ssid, password, timeout=15):
         raise RuntimeError("WiFi connection failed")
     return wlan.ifconfig()
 ```
+
+> ℹ️ The basic demo reads the Pico W CPU’s internal temperature sensor (`machine.ADC(4)`) once per minute. Use the `TEMPERATURE_CALIBRATION_OFFSET` constant in the example to align readings with an external thermometer if needed.
 
 ### Minimal usage example
 
@@ -135,7 +135,7 @@ client.publish_data("DHT22", {"temperature": 22.5, "humidity": 65.3}, unit="°C"
 client.send_heartbeat()
 ```
 
-See [examples/basic/main.py](examples/basic/main.py) for a full loop that sends heartbeats, processes commands, and reports errors.
+See [examples/basic/main.py](examples/basic/main.py) for a full loop that connects WiFi, streams the Pico W’s internal temperature sensor, sends heartbeats, and acknowledges commands.
 
 ## Configuration
 
