@@ -9,8 +9,8 @@ from mqtt_pico_swarm.constants import COMMAND_TYPE_ACTION
 from mqtt_pico_swarm.errors import ConnectionError
 
 CONFIG_FILE = "config.json"
-NETWORK_SSID = "ITH"
-NETWORK_PASSWORD = "xxx"
+NETWORK_SSID = "kumliens"
+NETWORK_PASSWORD = "uVnwt.A9JzhH"
 PUBLISH_INTERVAL = 60
 
 

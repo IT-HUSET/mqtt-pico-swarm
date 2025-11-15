@@ -34,6 +34,29 @@ class MQTTAdapter:
         self._connected = False
         self._last_will = None
 
+    @staticmethod
+    def _topic_to_bytes(topic):
+        if isinstance(topic, bytes):
+            return topic
+        if isinstance(topic, bytearray):
+            return bytes(topic)
+        if isinstance(topic, str):
+            return topic.encode("utf-8")
+        raise TypeError("Topic must be str or bytes-like, got {}".format(type(topic).__name__))
+
+    @staticmethod
+    def _payload_to_bytes(payload):
+        if isinstance(payload, bytes):
+            return payload
+        if isinstance(payload, bytearray):
+            return bytes(payload)
+        if isinstance(payload, memoryview):
+            return bytes(payload)
+        if isinstance(payload, str):
+            return payload.encode("utf-8")
+        # Fallback: str-konvertera och encoda
+        return str(payload).encode("utf-8")
+
     def set_callback(self, callback):
         self._callback = callback
         if self._client is not None:
@@ -107,19 +130,24 @@ class MQTTAdapter:
         for compatibility and let the underlying client handle defaults.
         """
         self._ensure_client()
+        topic = self._topic_to_bytes(topic)
+        payload = self._payload_to_bytes(payload)
+        topic_display = topic.decode("utf-8") if isinstance(topic, (bytes, bytearray)) else str(topic)
         # Debug-markör för version på enheten
-        print("[MQTTAdapter] publish v1", topic)
+        print("[MQTTAdapter] publish simple2", topic_display)
         try:
-            # Anropa med minsta gemensamma signatur
-            self._client.publish(topic, payload)
+            # Anropa med retain/qos så att QoS 1 fungerar korrekt
+            self._client.publish(topic, payload, retain=retain, qos=qos)
         except Exception as error:
             self._connected = False
             raise ConnectionError("Failed to publish message: {!r}".format(error)) from error
 
     def subscribe(self, topic, qos=0):
         self._ensure_client()
+        topic = self._topic_to_bytes(topic)
+        topic_display = topic.decode("utf-8") if isinstance(topic, (bytes, bytearray)) else str(topic)
         # Debug-markör för version på enheten
-        print("[MQTTAdapter] subscribe v1", topic, qos)
+        print("[MQTTAdapter] subscribe simple2", topic_display)
         try:
             self._client.subscribe(topic, qos)
         except AttributeError:
