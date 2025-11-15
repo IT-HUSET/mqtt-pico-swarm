@@ -1,5 +1,7 @@
 # MQTT Communication Protocol: Hub and Pico W IoT System
 
+<!-- cSpell:words Pico pico Mosquitto Synchronisation -->
+
 **Version:** 1.0  
 **Date:** November 5, 2025  
 **Scope:** Communication protocol between Raspberry Pi 5 Hub (Java) and Raspberry Pi Pico W clients (Python)
@@ -18,6 +20,9 @@
 8. [Error Handling](#error-handling)
 9. [Time Synchronisation](#time-synchronisation)
 10. [Examples](#examples)
+11. [Implementation Checklist](#implementation-checklist)
+12. [Version History](#version-history)
+13. [Document References](#document-references)
 
 ---
 
@@ -27,7 +32,7 @@ This document defines the MQTT protocol for communication between a central Hub 
 
 ### Key Characteristics
 
-- **Broker:** Mosquitto MQTT Broker on Raspberry Pi 5
+- **Broker:** [Mosquitto MQTT Broker](https://mosquitto.org/) on Raspberry Pi 5
 - **Port:** 1883 (standard MQTT)
 - **Protocol Version:** MQTT 5.0 compatible
 - **Architecture:** Hub-and-Spoke with Last Will Testament support
@@ -41,7 +46,7 @@ This document defines the MQTT protocol for communication between a central Hub 
 
 All topics follow a hierarchical structure to organize communication:
 
-```
+```text
 hub/
   devices/
     {device_id}/
@@ -94,10 +99,10 @@ hub/
 
 ### 3. Topic Naming Conventions
 
-- Use **lowercase** with **hyphens** for multi-word topics
-- Use **{device_id}** as placeholder for actual device identifiers
-- Device IDs: `pico-001`, `pico-002`, etc.
-- Example: `hub/devices/pico-001/status`
+- Use **lowercase** with **hyphens** for multi-word topics.
+- Use `{device_id}` as a placeholder for actual device identifiers.
+- Example device IDs: `pico-001`, `pico-002`, etc.
+- Example topic: `hub/devices/pico-001/status`.
 
 ---
 
@@ -108,6 +113,7 @@ hub/
 **Topic:** `hub/devices/{device_id}/status`
 
 **Payload (JSON):**
+
 ```json
 {
   "device_id": "pico-001",
@@ -121,6 +127,7 @@ hub/
 ```
 
 **Fields:**
+
 - `device_id` (string): Unique device identifier
 - `device_type` (string): Type of device (temperature_sensor, motion_detector, etc.)
 - `status` (string): "online" or "offline"
@@ -134,6 +141,7 @@ hub/
 **Topic:** `hub/devices/{device_id}/heartbeat`
 
 **Payload (JSON):**
+
 ```json
 {
   "device_id": "pico-001",
@@ -145,6 +153,7 @@ hub/
 ```
 
 **Fields:**
+
 - `device_id` (string): Unique device identifier
 - `timestamp` (ISO 8601): UTC timestamp
 - `uptime_seconds` (integer): Device uptime in seconds
@@ -156,6 +165,7 @@ hub/
 **Topic:** `hub/devices/{device_id}/data`
 
 **Payload (JSON) - Example for Temperature Sensor:**
+
 ```json
 {
   "device_id": "pico-001",
@@ -170,6 +180,7 @@ hub/
 ```
 
 **Generic Fields:**
+
 - `device_id` (string): Unique device identifier
 - `sensor_type` (string): Type of sensor
 - `data` (object): Sensor-specific data (structure varies per sensor type)
@@ -181,6 +192,7 @@ hub/
 **Topic:** `hub/devices/{device_id}/events`
 
 **Payload (JSON):**
+
 ```json
 {
   "device_id": "pico-001",
@@ -193,6 +205,7 @@ hub/
 ```
 
 **Fields:**
+
 - `device_id` (string): Unique device identifier
 - `event_type` (string): "error", "warning", "info"
 - `event_code` (string): Machine-readable event identifier
@@ -205,6 +218,7 @@ hub/
 **Topic:** `hub/devices/{device_id}/commands/{command_type}`
 
 **Payload (JSON) - Example Config Command:**
+
 ```json
 {
   "command_id": "cmd-12345",
@@ -220,6 +234,7 @@ hub/
 ```
 
 **Fields:**
+
 - `command_id` (string): Unique command identifier for tracking
 - `device_id` (string): Target device identifier
 - `type` (string): Type of command
@@ -227,6 +242,7 @@ hub/
 - `timestamp` (ISO 8601): When command was issued
 
 **Payload (JSON) - Example Action Command:**
+
 ```json
 {
   "command_id": "cmd-12346",
@@ -245,6 +261,7 @@ hub/
 **Topic:** `hub/devices/{device_id}/commands/ack`
 
 **Payload (JSON):**
+
 ```json
 {
   "command_id": "cmd-12345",
@@ -257,6 +274,7 @@ hub/
 ```
 
 **Fields:**
+
 - `command_id` (string): Reference to original command
 - `device_id` (string): Device identifier
 - `status` (string): "acknowledged", "processing", "success", "failed"
@@ -269,6 +287,7 @@ hub/
 **Topic:** `hub/devices/registry`
 
 **Payload (JSON):**
+
 ```json
 {
   "active_devices": [
@@ -337,7 +356,7 @@ According to MQTT 5.0 specification:
 
 ### 1. Device Registration Flow
 
-```
+```text
 Pico W Starts Up
     |
     +-- Connect to WiFi
@@ -350,7 +369,7 @@ Pico W Starts Up
     |   - hub/broadcast/#
     |
     +-- Publish Status Message (QoS 1, Retained)
-    |   Topic: hub/devices/{device_id}/status
+         Topic: hub/devices/{device_id}/status
     |
     +-- Start Heartbeat Timer (60 second interval)
     |
@@ -363,7 +382,7 @@ Pico W Starts Up
 
 When a Pico W connects, it registers a Last Will message that the broker will publish if the connection is lost:
 
-```json
+```text
 Topic: hub/devices/{device_id}/status
 Payload: {
   "device_id": "pico-001",
@@ -375,6 +394,7 @@ Retained: Yes
 ```
 
 **Connection Settings (Pico W):**
+
 - Clean Session: False (retain session state)
 - Keep Alive: 60 seconds
 - Connection Timeout: 30 seconds
@@ -382,7 +402,7 @@ Retained: Yes
 
 ### 3. Graceful Shutdown
 
-```
+```text
 Pico W Shutdown Sequence:
   1. Stop publishing heartbeats
   2. Publish final status (status: "offline")
@@ -399,6 +419,7 @@ Pico W Shutdown Sequence:
 Each Pico W device publishes a heartbeat message every **60 seconds**.
 
 **Heartbeat Message:**
+
 ```json
 {
   "device_id": "pico-001",
@@ -420,7 +441,7 @@ The Hub tracks device status:
 
 **Device Status Check Algorithm:**
 
-```
+```text
 FOR EACH device:
   IF (current_time - last_heartbeat > 180 seconds):
     Mark device as "OFFLINE"
@@ -434,6 +455,7 @@ FOR EACH device:
 ```
 
 **Timeout Values:**
+
 - **Heartbeat Expected Every:** 60 seconds
 - **Grace Period (SUSPECT):** 120 seconds (2 missed heartbeats)
 - **Offline Threshold:** 180 seconds (3 missed heartbeats)
@@ -453,10 +475,10 @@ The Hub maintains an active device registry topic:
 
 ### 1. Command Flow
 
-```
+```text
 Hub Issues Command
     |
-    +-- Publish to: hub/devices/{device_id}/commands/{type}
+    +-- Publish to: [hub/devices/{device_id}/commands/{type}](#hub/devices/{device_id}/commands/{type})
     |                  (QoS 2, not retained)
     |
 Pico W Receives Command
@@ -466,44 +488,51 @@ Pico W Receives Command
     +-- Execute command
     |
     +-- Publish Acknowledgment
-         Topic: hub/devices/{device_id}/commands/ack
+         Topic: [hub/devices/{device_id}/commands/ack](#hub/devices/{device_id}/commands/ack)
          (QoS 1, includes result status)
 ```
 
 ### 2. Command Types
 
 #### **Config Command**
+
 - **Topic:** `hub/devices/{device_id}/commands/config`
 - **QoS:** 2
 - **Purpose:** Update device configuration
 - **Example Parameters:** heartbeat_interval, sensor_sample_rate, etc.
 
 #### **Action Command**
+
 - **Topic:** `hub/devices/{device_id}/commands/action`
 - **QoS:** 1
 - **Purpose:** Control device behavior
 - **Example Parameters:** relay_state, led_control, etc.
 
 #### **Restart Command**
+
 - **Topic:** `hub/devices/{device_id}/commands/restart`
 - **QoS:** 2
 - **Purpose:** Restart the device
 - **Payload:** Empty or timestamp
 
 #### **Immediate Data Trigger**
+
 - **Topic:** `hub/devices/{device_id}/commands/trigger-data`
 - **QoS:** 1
 - **Purpose:** Instruct a single device to publish its current sensor data immediately, outside the normal interval.
 - **Payload:** Optional metadata from the hub (e.g. `command_id`, `requested_at`).
+  
   ```json
   {
     "command_id": "cmd-16273",
     "requested_at": "2024-11-15T15:23:10Z"
   }
   ```
+  
 - **Response:** Device publishes its standard `data` message to `hub/devices/{device_id}/data` and logs the trigger; no separate acknowledgment is required.
 
 #### **Broadcast Commands**
+
 - **Topic:** `hub/broadcast/config-update`
   - **QoS:** 1
   - **Purpose:** Update multiple devices at once (e.g. firmware rollout)
@@ -511,6 +540,7 @@ Pico W Receives Command
   - **QoS:** 1 (retained)
   - **Purpose:** Distribute the hub’s current UTC time to every Pico
   - **Example Payload:**
+
     ```json
     {
       "timestamp": "2025-11-15T15:21:30Z",
@@ -519,11 +549,23 @@ Pico W Receives Command
     }
     ```
 
+## Time Synchronisation
+
+Time synchronisation relies on the retained broadcast topic shown above. The hub publishes the latest UTC time in both ISO-8601 string form (`timestamp`) and epoch milliseconds (`epoch_ms`). Devices subscribe to this topic during connection and should:
+
+1. Parse the payload defensively (handle retained messages, stale data, or missing fields).
+2. Convert the timestamp to a struct_time and update the device RTC if the delta exceeds the device’s drift tolerance.
+3. Log successes and failures so the hub can diagnose clock issues.
+4. Honour the retained flag—new devices will receive the most recent time without waiting for a fresh broadcast.
+
+Time broadcasts SHOULD be sent whenever the hub’s clock is corrected or at least once per hour to keep drift minimal.
+
 ### 3. Acknowledgment Protocol
 
 All commands require acknowledgment:
 
 **Pico W Acknowledgment:**
+
 ```json
 {
   "command_id": "cmd-12345",
@@ -534,6 +576,7 @@ All commands require acknowledgment:
 ```
 
 **Possible Status Values:**
+
 - `acknowledged`: Command received and being processed
 - `processing`: Command in progress
 - `success`: Command completed successfully
@@ -544,7 +587,7 @@ All commands require acknowledgment:
 
 **Acknowledgment Timeout Algorithm:**
 
-```
+```text
 FOR EACH command sent:
   Start timer for 30 seconds
   
@@ -566,7 +609,7 @@ FOR EACH command sent:
 
 **Pico W Behavior:**
 
-```
+```text
 If connection lost:
   1. Stop all operations
   2. Attempt reconnect (every 5 seconds, max 10 times)
@@ -577,7 +620,7 @@ If connection lost:
 
 **Hub Behavior:**
 
-```
+```text
 If Pico W goes offline:
   1. Last Will message received (via LWT)
   2. Update device status to "offline"
@@ -649,7 +692,7 @@ If Pico W doesn't acknowledge within 30 seconds:
 
 ### Example 1: Complete Device Connection Sequence
 
-```
+```text
 Time: 10:30:00 - Pico W boots
   -> Connects to WiFi
   -> Connects to MQTT (client_id: pico-001, clean_session: false)
@@ -689,7 +732,7 @@ Time: 10:32:02 - Hub receives acknowledgment
 
 ### Example 2: Device Timeout and Offline Detection
 
-```
+```text
 Time: 10:35:00 - Pico W last heartbeat
   -> Hub marks: ONLINE
 
@@ -714,7 +757,7 @@ Time: 10:37:00 - Pico W reconnects
 
 ### Example 3: Sensor Data Collection (Event-Driven)
 
-```
+```text
 Time: 10:40:15 - Temperature sensor reports new reading
   -> Pico W reads: temp=22.5C, humidity=65%
   -> Publishes (QoS 1):
@@ -773,7 +816,7 @@ Time: 10:40:16 - Hub receives sensor data
 
 ## Document References
 
-- MQTT 5.0 Specification: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
-- Raspberry Pi Pico W: https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html
-- MicroPython: https://micropython.org/
-- Eclipse Mosquitto: https://mosquitto.org/
+- [MQTT 5.0 Specification](https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html)
+- [Raspberry Pi Pico W](https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html)
+- [MicroPython](https://micropython.org/)
+- [Eclipse Mosquitto](https://mosquitto.org/)
