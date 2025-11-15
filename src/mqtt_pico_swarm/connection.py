@@ -20,6 +20,8 @@ class ConnectionManager:
         reconnect_delay=5,
         max_reconnect_attempts=10,
         debug=False,
+        broadcast_topics=None,
+        broadcast_handler=None,
     ):
         self._adapter = adapter
         self._command_handler = command_handler
@@ -30,6 +32,8 @@ class ConnectionManager:
         self._debug = debug
         self._connected = False
         self._last_will = None
+        self._broadcast_topics = broadcast_topics or []
+        self._broadcast_handler = broadcast_handler
 
     def configure_last_will(self, last_will):
         """Store last will payload to apply on connect."""
@@ -114,8 +118,9 @@ class ConnectionManager:
         """Non-blocking check for incoming MQTT messages."""
         try:
             self._adapter.check_message()
-        except ConnectionError:
+        except ConnectionError as error:
             self._connected = False
+            log(self._debug, "process_incoming failed: {}".format(error))
             raise
 
     def wait_for_message(self):
@@ -130,15 +135,39 @@ class ConnectionManager:
         for topic in self._command_handler.subscribed_topics(self._device_id):
             # QoS 0 för maximal kompatibilitet med olika umqtt-versioner
             self._adapter.subscribe(topic, qos=0)
-        # Broadcast topics (if any) handled by client-level logic later
+
+        for topic, qos in self._broadcast_topics:
+            try:
+                self._adapter.subscribe(topic, qos=qos)
+            except ConnectionError as error:
+                log(self._debug, "Failed to subscribe to broadcast {}: {}".format(topic, error))
 
     def _handle_message(self, topic, payload):
+        handled = False
+        log(self._debug, "Dispatching topic: {}".format(topic))
+        handled = False
+        command_error = None
+
         try:
             handled = self._command_handler.dispatch(topic, payload)
-            if not handled:
-                log(self._debug, "Unhandled command topic: " + topic)
         except Exception as error:
-            log(self._debug, "Command handler error: " + str(error))
+            command_error = error
+
+        if not handled and self._broadcast_handler:
+            try:
+                handled = self._broadcast_handler(topic, payload) or handled
+            except Exception as error:
+                log(self._debug, "Broadcast handler error: " + str(error))
+
+        if not handled:
+            if command_error:
+                log(self._debug, "Command handler skipped topic (no callback): " + str(command_error))
+            log(self._debug, "Unhandled topic: " + topic)
+        elif command_error:
+            log(
+                self._debug,
+                "Command handler skipped for broadcast (topic: {}): {}".format(topic, command_error),
+            )
 
 
 def _next_backoff(current):

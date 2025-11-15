@@ -16,7 +16,8 @@
 6. [Heartbeat and Device Monitoring](#heartbeat-and-device-monitoring)
 7. [Commands and Responses](#commands-and-responses)
 8. [Error Handling](#error-handling)
-9. [Examples](#examples)
+9. [Time Synchronisation](#time-synchronisation)
+10. [Examples](#examples)
 
 ---
 
@@ -78,10 +79,11 @@ hub/
 
 #### **Broadcast Topics** (Hub -> All Pico W)
 
-| Topic | Purpose | QoS |
-|-------|---------|-----|
-| `hub/broadcast/message` | Broadcast messages to all devices | 0 |
-| `hub/broadcast/config-update` | System-wide configuration updates | 1 |
+| Topic | Purpose | QoS | Retained |
+|-------|---------|-----|----------|
+| `hub/broadcast/message` | Broadcast messages to all devices | 0 | No |
+| `hub/broadcast/config-update` | System-wide configuration updates | 1 | No |
+| `hub/broadcast/time-sync` | Current hub UTC time for device clocks | 1 | Yes |
 
 #### **System Topics**
 
@@ -488,11 +490,21 @@ Pico W Receives Command
 - **Purpose:** Restart the device
 - **Payload:** Empty or timestamp
 
-#### **Broadcast Command**
+#### **Broadcast Commands**
 - **Topic:** `hub/broadcast/config-update`
-- **QoS:** 1
-- **Purpose:** Update multiple devices at once
-- **Example:** Firmware update notification
+  - **QoS:** 1
+  - **Purpose:** Update multiple devices at once (e.g. firmware rollout)
+- **Topic:** `hub/broadcast/time-sync`
+  - **QoS:** 1 (retained)
+  - **Purpose:** Distribute the hub’s current UTC time to every Pico
+  - **Example Payload:**
+    ```json
+    {
+      "timestamp": "2025-11-15T15:21:30Z",
+      "epoch_ms": 1731684090000,
+      "source": "hub"
+    }
+    ```
 
 ### 3. Acknowledgment Protocol
 

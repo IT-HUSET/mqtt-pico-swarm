@@ -45,7 +45,7 @@ Key goals:
 - **Configurable behaviour** – JSON config files managed by `ConfigManager`, including validation and safe updates.
 - **Protocol compliance** – topic helpers and payload builders ensure messages match the documented contract in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 - **Command routing** – `CommandHandler` supports type-specific callbacks plus wildcards for fleet-wide actions.
-- **Ready-to-run example** – `examples/basic/main.py` demonstrates WiFi setup, MQTT lifecycle, command handling, and real temperature telemetry.
+- **Ready-to-run example** – `examples/basic/main.py` demonstrates WiFi setup, MQTT lifecycle, command handling, real temperature telemetry, and optional time synchronisation via broadcast.
 
 ## What's inside
 

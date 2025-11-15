@@ -1,6 +1,7 @@
 """MQTT adapter wrapping umqtt.simple2 for Pico Swarm."""
 
 from .errors import ConnectionError
+from .utils import log
 
 try:
     # Byt till umqtt.simple2 för bättre kompatibilitet på riktiga enheter.
@@ -88,7 +89,7 @@ class MQTTAdapter:
                     ssl_params,
                 )
             except Exception as error:
-                print("Failed to create MQTT client:", error)
+                log(True, "Failed to create MQTT client: {}".format(error), prefix="[MQTTAdapter]")
                 raise ConnectionError("Failed to create MQTT client") from error
 
         if last_will:
@@ -134,7 +135,7 @@ class MQTTAdapter:
         payload = self._payload_to_bytes(payload)
         topic_display = topic.decode("utf-8") if isinstance(topic, (bytes, bytearray)) else str(topic)
         # Debug-markör för version på enheten
-        print("[MQTTAdapter] publish simple2", topic_display)
+        log(True, "publish simple2 {}".format(topic_display), prefix="[MQTTAdapter]")
         try:
             # Anropa med retain/qos så att QoS 1 fungerar korrekt
             self._client.publish(topic, payload, retain=retain, qos=qos)
@@ -147,7 +148,7 @@ class MQTTAdapter:
         topic = self._topic_to_bytes(topic)
         topic_display = topic.decode("utf-8") if isinstance(topic, (bytes, bytearray)) else str(topic)
         # Debug-markör för version på enheten
-        print("[MQTTAdapter] subscribe simple2", topic_display)
+        log(True, "subscribe simple2 {}".format(topic_display), prefix="[MQTTAdapter]")
         try:
             self._client.subscribe(topic, qos)
         except AttributeError:
@@ -166,7 +167,7 @@ class MQTTAdapter:
             self._client.wait_msg()
         except Exception as error:
             self._connected = False
-            raise ConnectionError("Failed while waiting for message") from error
+            raise ConnectionError("Failed while waiting for message: {!r}".format(error)) from error
 
     def check_message(self):
         self._ensure_client()
@@ -174,7 +175,7 @@ class MQTTAdapter:
             self._client.check_msg()
         except Exception as error:
             self._connected = False
-            raise ConnectionError("Failed while checking messages") from error
+            raise ConnectionError("Failed while checking messages: {!r}".format(error)) from error
 
     def set_last_will(self, topic, payload, retain=False, qos=0):
         self._ensure_client(create=False)
@@ -195,8 +196,12 @@ class MQTTAdapter:
                 return
             raise ConnectionError("MQTT client not created")
 
-    def _handle_message(self, topic, msg):
+    def _handle_message(self, topic, msg, retained=False, dup=False):
         if isinstance(topic, bytes):
             topic = topic.decode("utf-8")
         if self._callback:
-            self._callback(topic, msg)
+            try:
+                self._callback(topic, msg)
+            except TypeError:
+                # För bibliotek som förväntar retained/dup skickar vi vidare dem.
+                self._callback(topic, msg, retained, dup)

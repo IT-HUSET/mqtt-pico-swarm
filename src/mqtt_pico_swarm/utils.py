@@ -1,3 +1,37 @@
+
+
+def _current_timestamp_string():
+    """Return current time formatted as YYYY-MM-DD HH:MM:SS.mmm."""
+    milliseconds = 0
+    epoch_seconds = None
+
+    try:
+        now = time.time()
+        epoch_seconds = int(now)
+        milliseconds = int((now - epoch_seconds) * 1000)
+    except Exception:
+        epoch_seconds = None
+        milliseconds = 0
+
+    try:
+        if epoch_seconds is not None:
+            tm = time.localtime(epoch_seconds)
+        else:
+            tm = time.localtime()
+    except Exception:
+        tm = time.gmtime()
+
+    # Fallback till ticks_ms när time.time saknar sub-sekunds upplösning (MicroPython)
+    if milliseconds == 0 and hasattr(time, "ticks_ms"):
+        try:
+            milliseconds = time.ticks_ms() % 1000
+        except Exception:
+            milliseconds = 0
+
+    year_short = tm[0] % 100
+    return "{:02d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.{:03d}".format(
+        year_short, tm[1], tm[2], tm[3], tm[4], tm[5], milliseconds
+    )
 """Shared utility helpers for the MQTT Pico Swarm client.
 
 These helpers must remain MicroPython-friendly (no datetime module, no
@@ -80,10 +114,13 @@ def trigger_gc(threshold=10240):
         gc.collect()
 
 
-def log(debug_enabled, message):
+def log(debug_enabled, message, prefix="[PicoSwarm]"):
     """Print message when debugging is enabled."""
-    if debug_enabled:
-        print("[PicoSwarm] " + message)
+    if not debug_enabled:
+        return
+
+    timestamp = _current_timestamp_string()
+    print("{} {} {}".format(timestamp, prefix, message))
 
 
 def is_network_available():

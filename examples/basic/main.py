@@ -10,9 +10,9 @@ except ImportError:  # pragma: no cover - maskinmodul saknas vid lokal test
 
 from mqtt_pico_swarm import constants
 from mqtt_pico_swarm.client import PicoSwarmClient
-from mqtt_pico_swarm.constants import COMMAND_TYPE_ACTION
+from mqtt_pico_swarm.constants import COMMAND_TYPE_ACTION, TOPIC_BROADCAST_TIME_SYNC
 from mqtt_pico_swarm.errors import ConnectionError
-from mqtt_pico_swarm.utils import current_timestamp
+from mqtt_pico_swarm.utils import current_timestamp, log
 
 CONFIG_FILE = "config.json"
 NETWORK_SSID = "kumliens"
@@ -26,20 +26,24 @@ else:
     _temperature_sensor = None
 
 
+def _log(message):
+    log(True, message, prefix="[Example]")
+
+
 def connect_wifi(ssid, password, timeout=20):
     wlan = network.WLAN(network.STA_IF)
     if not wlan.isconnected():
-        print("Aktiverar WiFi...")
+        _log("Aktiverar WiFi...")
         wlan.active(True)
         wlan.connect(ssid, password)
         while not wlan.isconnected() and timeout > 0:
-            print("Väntar på WiFi...", timeout)
+            _log("Väntar på WiFi... {}".format(timeout))
             time.sleep(1)
             timeout -= 1
     if not wlan.isconnected():
         raise RuntimeError("Kunde inte ansluta till WiFi")
     ip, _, _, _ = wlan.ifconfig()
-    print("WiFi ansluten, IP:", ip)
+    _log("WiFi ansluten, IP: {}".format(ip))
     return ip
 
 
@@ -65,14 +69,14 @@ def main():
     try:
         _ = _load_config()
     except OSError:
-        print("config.json saknas. Kopiera config.json.example och fyll i MQTT-detaljer.")
+        _log("config.json saknas. Kopiera config.json.example och fyll i MQTT-detaljer.")
         return
 
     client = PicoSwarmClient(config_file=CONFIG_FILE, debug=True)
 
     @client.on_command(COMMAND_TYPE_ACTION)
     def handle_action(command):
-        print("Mottog action-kommando:", command)
+        _log("Mottog action-kommando: {}".format(command))
         command_id = command.get("command_id")
         if command_id:
             client.acknowledge_command(
@@ -89,7 +93,7 @@ def main():
             "Enheten är online",
         )
 
-        print("Startar huvudloopen. Tryck Ctrl+C för att avsluta.")
+        _log("Startar huvudloopen. Tryck Ctrl+C för att avsluta.")
         last_publish = 0
         heartbeat_interval = client.get_config().get("heartbeat_interval", 60)
         last_heartbeat = time.time()
@@ -107,13 +111,23 @@ def main():
             # Publicera sensordata enligt intervall
             if now - last_publish >= PUBLISH_INTERVAL:
                 temperature_c = read_internal_temperature(TEMPERATURE_CALIBRATION_OFFSET)
-                print("Mäter intern temperatur:", round(temperature_c, 2), "°C")
+                _log("Mäter intern temperatur: {:.2f} °C".format(round(temperature_c, 2)))
                 payload = {
                     "temperature_c": round(temperature_c, 2),
                     "timestamp": current_timestamp(),
                     "sensor": "pico_w_cpu",
                 }
                 client.publish_data("temperature", payload)
+                # Log current RTC time as received via broadcast if available
+                try:
+                    now_rtc = time.localtime()
+                    _log(
+                        "Aktuell RTC-tid: {:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(
+                            now_rtc[0], now_rtc[1], now_rtc[2], now_rtc[3], now_rtc[4], now_rtc[5]
+                        )
+                    )
+                except Exception:
+                    pass
                 last_publish = now
 
             # Skicka heartbeat enligt konfigurationen
@@ -123,10 +137,10 @@ def main():
 
             time.sleep(0.1)
     except KeyboardInterrupt:
-        print("Avslutar klient")
+        _log("Avslutar klient")
     finally:
         client.stop()
-        print("Klient nedstängd.")
+        _log("Klient nedstängd.")
 
 if __name__ == "__main__":
     main()
