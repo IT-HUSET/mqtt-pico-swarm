@@ -60,6 +60,7 @@ class CommandHandler:
             constants.device_command_topic(device_id, constants.COMMAND_TYPE_ACTION),
             constants.device_command_topic(device_id, constants.COMMAND_TYPE_RESTART),
             constants.device_command_topic(device_id, constants.COMMAND_TYPE_TRIGGER_DATA),
+            constants.device_command_topic(device_id, constants.COMMAND_TYPE_LIGHT),
         ]
 
 

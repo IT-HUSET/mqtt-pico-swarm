@@ -10,24 +10,70 @@ except ImportError:  # pragma: no cover - maskinmodul saknas vid lokal test
 
 from mqtt_pico_swarm import constants
 from mqtt_pico_swarm.client import PicoSwarmClient
-from mqtt_pico_swarm.constants import COMMAND_TYPE_ACTION, COMMAND_TYPE_TRIGGER_DATA, TOPIC_BROADCAST_TIME_SYNC
+from mqtt_pico_swarm.constants import (
+    COMMAND_TYPE_ACTION,
+    COMMAND_TYPE_LIGHT,
+    COMMAND_TYPE_TRIGGER_DATA,
+    TOPIC_BROADCAST_TIME_SYNC,
+)
 from mqtt_pico_swarm.errors import ConnectionError
 from mqtt_pico_swarm.utils import current_timestamp, log
 
 CONFIG_FILE = "config.json"
 NETWORK_SSID = "kumliens"
-NETWORK_PASSWORD = "uVnwt.A9JzhH"
+NETWORK_PASSWORD = "xxx"
 PUBLISH_INTERVAL = 60
 TEMPERATURE_CALIBRATION_OFFSET = 0.0  # Justera vid behov för att kalibrera mot extern termometer
 
 if machine is not None:
     _temperature_sensor = machine.ADC(4)
+    try:
+        _light_output = machine.Pin("LED", machine.Pin.OUT)
+    except (ValueError, AttributeError):  # pragma: no cover - fallback för kort utan "LED"
+        try:
+            _light_output = machine.Pin(25, machine.Pin.OUT)
+        except (ValueError, AttributeError):
+            _light_output = None
 else:
     _temperature_sensor = None
+    _light_output = None
+
+try:
+    _current_light_state = bool(_light_output.value()) if _light_output is not None else False
+except Exception:  # pragma: no cover - vissa implementationer saknar value()
+    _current_light_state = False
 
 
 def _log(message):
     log(True, message, prefix="[Example]")
+
+
+def _write_light_state(enabled):
+    if _light_output is None:
+        raise ValueError("Device has no controllable LED")
+    try:
+        _light_output.value(1 if enabled else 0)
+    except Exception as error:
+        raise ValueError("Failed to drive LED: {}".format(error)) from error
+    global _current_light_state
+    _current_light_state = bool(enabled)
+
+
+def _apply_light_action(action, state):
+    if _light_output is None:
+        raise ValueError("Device has no controllable LED")
+
+    if action == "toggle":
+        _write_light_state(not _current_light_state)
+        return True
+
+    if action == "set":
+        if state not in ("on", "off"):
+            return False
+        _write_light_state(state == "on")
+        return True
+
+    raise ValueError("Unknown action: {}".format(action))
 
 
 def connect_wifi(ssid, password, timeout=20):
@@ -104,6 +150,52 @@ def main():
                 "success",
                 message="Åtgärd utförd på enhet",
             )
+
+    @client.on_command(COMMAND_TYPE_LIGHT)
+    def handle_light(command):
+        if not isinstance(command, dict):
+            _log("Ignorerar light-kommando utan JSON-payload: {}".format(command))
+            return False
+
+        command_id = command.get("commandId") or command.get("command_id")
+        action = str(command.get("action") or "set").lower()
+        state = str(command.get("state") or "").lower()
+
+        status = "success"
+        message = ""
+        handled = False
+
+        try:
+            handled = _apply_light_action(action, state)
+        except ValueError as error:
+            status = "failed"
+            message = str(error)
+        else:
+            if not handled:
+                status = "failed"
+                message = "Unsupported state value" if action == "set" else "Toggle failed"
+
+        if not command_id:
+            if status == "failed":
+                _log("Light-kommando misslyckades utan commandId: {}".format(message or command))
+            return handled
+
+        result = {"current_state": "on" if _current_light_state else "off"}
+        if "brightness" in command:
+            result["current_brightness"] = command.get("brightness")
+        if "color" in command:
+            result["current_color"] = command.get("color")
+
+        if status == "success" and not message:
+            message = "LED uppdaterad"
+
+        client.acknowledge_command(
+            command_id,
+            status,
+            message=message,
+            result=result,
+        )
+        return handled
 
     @client.on_command(COMMAND_TYPE_TRIGGER_DATA)
     def handle_trigger_data(command):

@@ -531,6 +531,95 @@ Pico W Receives Command
   
 - **Response:** Device publishes its standard `data` message to `hub/devices/{device_id}/data` and logs the trigger; no separate acknowledgment is required.
 
+#### **Light Command**
+
+- **Topic:** `hub/devices/{device_id}/commands/light`
+  - Devices already subscribe via `hub/devices/{device_id}/commands/#` but may also subscribe explicitly if desired.
+- **QoS:** 1 (at least once)
+- **Retained:** No (transient state change)
+- **Purpose:** Unified LED control for simple, PWM, and RGB-capable devices.
+- **Design Principle:** Devices ignore unsupported parameters to enable graceful degradation across hardware variants.
+
+**Payload Schema (JSON):**
+
+```json
+{
+  "commandId": "unique-uuid-here",
+  "timestamp": 1700000000,
+  "action": "set",
+  "state": "on",
+  "brightness": 75,
+  "color": {
+    "r": 255,
+    "g": 100,
+    "b": 50
+  }
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `commandId` | string (UUID) | Yes | Unique identifier echoed by acknowledgments. |
+| `timestamp` | integer | Yes | Unix timestamp (seconds) when the command was issued. |
+| `action` | string | Yes | `set` applies provided parameters; `toggle` flips the current state and ignores `state`, `brightness`, and `color`. |
+| `state` | string | No | `on` or `off`. Ignored if `action` is `toggle`. |
+| `brightness` | integer | No | 0–100 percent output. Ignored when the device lacks PWM support. |
+| `color` | object | No | RGB tuple with `r`, `g`, `b` in range 0–255. Ignored when the device lacks RGB capability. |
+
+**Example Payloads:**
+
+- Basic on/off for all LED types:
+
+  ```json
+  {
+    "commandId": "cmd-12345",
+    "timestamp": 1700000000,
+    "action": "set",
+    "state": "on"
+  }
+  ```
+
+- Dimmer-capable LED (color ignored by simpler devices):
+
+  ```json
+  {
+    "commandId": "cmd-12346",
+    "timestamp": 1700000001,
+    "action": "set",
+    "state": "on",
+    "brightness": 75
+  }
+  ```
+
+- RGB strip with brightness and color:
+
+  ```json
+  {
+    "commandId": "cmd-12347",
+    "timestamp": 1700000002,
+    "action": "set",
+    "state": "on",
+    "brightness": 80,
+    "color": {
+      "r": 255,
+      "g": 100,
+      "b": 50
+    }
+  }
+  ```
+
+- Toggle regardless of current state:
+
+  ```json
+  {
+    "commandId": "cmd-12348",
+    "timestamp": 1700000003,
+    "action": "toggle"
+  }
+  ```
+
+Devices SHOULD respond on `hub/devices/{device_id}/commands/ack` with current state, brightness, and optional color details in the `result` object.
+
 #### **Broadcast Commands**
 
 - **Topic:** `hub/broadcast/config-update`
