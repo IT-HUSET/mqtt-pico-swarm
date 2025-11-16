@@ -14,7 +14,6 @@ from mqtt_pico_swarm.constants import (
     COMMAND_TYPE_ACTION,
     COMMAND_TYPE_LIGHT,
     COMMAND_TYPE_TRIGGER_DATA,
-    TOPIC_BROADCAST_TIME_SYNC,
 )
 from mqtt_pico_swarm.errors import ConnectionError
 from mqtt_pico_swarm.utils import current_timestamp, log
@@ -45,10 +44,12 @@ except Exception:  # pragma: no cover - vissa implementationer saknar value()
 
 
 def _log(message):
+    """Write log messages with a consistent prefix so they stand out on serial output."""
     log(True, message, prefix="[Example]")
 
 
 def _write_light_state(enabled):
+    """Toggle the onboard LED pin and update our cached state."""
     if _light_output is None:
         raise ValueError("Device has no controllable LED")
     try:
@@ -60,6 +61,7 @@ def _write_light_state(enabled):
 
 
 def _apply_light_action(action, state):
+    """Apply the requested LED action ('set' or 'toggle') to the hardware."""
     if _light_output is None:
         raise ValueError("Device has no controllable LED")
 
@@ -77,6 +79,7 @@ def _apply_light_action(action, state):
 
 
 def connect_wifi(ssid, password, timeout=20):
+    """Bring up WiFi STA mode, retrying for a short while until connected."""
     wlan = network.WLAN(network.STA_IF)
     if not wlan.isconnected():
         _log("Aktiverar WiFi...")
@@ -94,11 +97,13 @@ def connect_wifi(ssid, password, timeout=20):
 
 
 def _load_config():
+    """Read the Pico's config.json so the client knows how to reach the hub."""
     with open(CONFIG_FILE, "r") as handle:
         return json.load(handle)
 
 
 def read_internal_temperature(offset=0.0):
+    """Measure CPU temperature via the internal ADC and apply an optional offset."""
     if _temperature_sensor is None:
         raise RuntimeError("Intern temperaturgivare är inte tillgänglig på denna plattform")
     conversion_factor = 3.3 / 65535
@@ -110,6 +115,7 @@ def read_internal_temperature(offset=0.0):
 
 
 def main():
+    """Entry point for the demo: connect, register handlers, and run the MQTT loop."""
     connect_wifi(NETWORK_SSID, NETWORK_PASSWORD)
 
     try:
@@ -121,6 +127,7 @@ def main():
     client = PicoSwarmClient(config_file=CONFIG_FILE, debug=True)
 
     def publish_temperature_reading():
+        """Grab a temperature sample and send it to the hub as sensor data."""
         temperature_c = read_internal_temperature(TEMPERATURE_CALIBRATION_OFFSET)
         temperature_c = round(temperature_c, 2)
         _log("Mäter intern temperatur: {:.2f} °C".format(temperature_c))
@@ -142,6 +149,7 @@ def main():
 
     @client.on_command(COMMAND_TYPE_ACTION)
     def handle_action(command):
+        """Ack simple action commands so the hub knows the device is alive."""
         _log("Mottog action-kommando: {}".format(command))
         command_id = command.get("command_id")
         if command_id:
@@ -153,6 +161,7 @@ def main():
 
     @client.on_command(COMMAND_TYPE_LIGHT)
     def handle_light(command):
+        """Parse incoming light command JSON and update the LED state."""
         if not isinstance(command, dict):
             _log("Ignorerar light-kommando utan JSON-payload: {}".format(command))
             return False
@@ -199,6 +208,7 @@ def main():
 
     @client.on_command(COMMAND_TYPE_TRIGGER_DATA)
     def handle_trigger_data(command):
+        """Allow the hub to request an immediate temperature publish."""
         command_id = None
         if isinstance(command, dict):
             command_id = command.get("command_id")
