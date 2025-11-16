@@ -42,6 +42,22 @@ class CommandHandlerTests(unittest.TestCase):
         self.assertEqual(len(self.wildcard_calls), 1)
         self.assertEqual(self.wildcard_calls[0][0], constants.COMMAND_TYPE_CONFIG)
 
+    def test_dispatch_light_command_invokes_registered_callback(self):
+        received = []
+
+        def light_callback(payload):
+            received.append(payload)
+
+        self.handler.on(constants.COMMAND_TYPE_LIGHT, light_callback)
+        topic = constants.device_command_topic("pico-1", constants.COMMAND_TYPE_LIGHT)
+        payload = {"command_id": "cmd-light", "action": "toggle"}
+
+        handled = self.handler.dispatch(topic, json.dumps(payload).encode("utf-8"))
+
+        self.assertTrue(handled)
+        self.assertEqual(len(received), 1)
+        self.assertEqual(received[0]["action"], "toggle")
+
     def test_dispatch_unknown_command_invokes_wildcard_only(self):
         self._register()
         payload = {"command_id": "cmd-2", "payload": {}}

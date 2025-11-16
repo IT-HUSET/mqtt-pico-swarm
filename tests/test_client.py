@@ -132,9 +132,14 @@ class PicoSwarmClientTests(unittest.TestCase):
         self.client.connect()
 
         self.assertTrue(self.adapter.connected)
+        subscriptions = [topic for topic, _ in self.adapter.subscriptions]
         self.assertIn(
             constants.device_command_topic("pico-001", constants.COMMAND_TYPE_CONFIG),
-            [topic for topic, _ in self.adapter.subscriptions],
+            subscriptions,
+        )
+        self.assertIn(
+            constants.device_command_topic("pico-001", constants.COMMAND_TYPE_LIGHT),
+            subscriptions,
         )
         last_topic, payload, qos, retain = self.adapter.published_messages[-1]
         self.assertEqual(last_topic, constants.status_topic("pico-001"))
@@ -163,6 +168,33 @@ class PicoSwarmClientTests(unittest.TestCase):
         ack = json.loads(payload)
         self.assertEqual(topic, constants.device_ack_topic("pico-001"))
         self.assertEqual(ack["status"], "success")
+        self.assertEqual(qos, constants.QOS_COMMAND_ACK)
+        self.assertFalse(retain)
+
+    def test_light_command_callback_publishes_ack_with_result(self):
+        self.client.connect()
+
+        @self.client.on_command(constants.COMMAND_TYPE_LIGHT)
+        def handle_light(payload):
+            command_id = payload.get("commandId") or payload.get("command_id")
+            self.client.acknowledge_command(
+                command_id,
+                "success",
+                result={"current_state": payload.get("state", "off")},
+            )
+
+        payload = json.dumps(
+            {"commandId": "cmd-light", "action": "set", "state": "on"}
+        )
+        topic = constants.device_command_topic("pico-001", constants.COMMAND_TYPE_LIGHT)
+        self.adapter.emit(topic, payload)
+
+        topic, payload, qos, retain = self.adapter.published_messages[-1]
+        ack = json.loads(payload)
+        self.assertEqual(topic, constants.device_ack_topic("pico-001"))
+        self.assertEqual(ack["command_id"], "cmd-light")
+        self.assertEqual(ack["status"], "success")
+        self.assertEqual(ack["result"]["current_state"], "on")
         self.assertEqual(qos, constants.QOS_COMMAND_ACK)
         self.assertFalse(retain)
 
