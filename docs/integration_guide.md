@@ -134,16 +134,21 @@ pytest
 ### Prepare the Pico W
 
 1. **Flash MicroPython** (only required once per board):
+
    ```bash
    wget https://micropython.org/resources/firmware/RPI_PICO_W-20240222-v1.22.0.uf2
    # Hold BOOTSEL while plugging in the Pico, copy the UF2 to the mounted drive.
    ```
+
 2. **Install the MQTT client dependency** on the board if you are not using the deployment script:
+
    ```bash
    mpremote connect auto mip install micropython-umqtt.simple2
    ```
+
 3. **Validate the REPL**:
-   ```bash
+
+   ```python
    mpremote connect auto
    >>> import network
    >>> exit()
@@ -338,7 +343,7 @@ python scripts/deploy_demo.py \
 
 Monitor the terminal for `[Example]` log lines. A successful boot looks like:
 
-```
+```text
 [Example] Connecting to WiFi...
 [Example] Connected to MQTT broker at 192.168.1.10:1883
 [Example] Published temperature reading: 23.4 °C
@@ -392,6 +397,7 @@ Most developers already have sensor and actuator code. The goal is to wrap that 
 #### 5.1 Identify Integration Points
 
 Look at your existing loop and note where you:
+
 - Read sensors
 - Update actuators (LEDs, relays, etc.)
 - Wait or sleep
