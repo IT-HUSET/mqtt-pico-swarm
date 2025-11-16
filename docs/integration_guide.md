@@ -765,7 +765,10 @@ Use these real-world scenarios as inspiration. Each follows the same integration
 1. **Add Diagnostics:** Extend the example to publish battery voltage or RSSI if your hardware supports it.
 2. **Implement Hub Automation:** Use the consistent acknowledgement payloads to trigger workflows (e.g., Home Assistant automations or a custom dashboard).
 3. **Contribute Back:** If you discover a new pattern or fix, open a pull request so the wider community benefits.
-4. **Connect with the Community:** Raise feature ideas or questions in [GitHub Issues](https://github.com/IT-HUSET/mqtt-pico-swarm/issues) or continue discussions in [GitHub Discussions](https://github.com/IT-HUSET/mqtt-pico-swarm/discussions).
+4. **Connect with the Community:**
+   - Found a bug? Open an [Issue](https://github.com/IT-HUSET/mqtt-pico-swarm/issues) with `BUG` in the title so maintainers can triage quickly.
+   - Have a feature idea? Start a [Discussion](https://github.com/IT-HUSET/mqtt-pico-swarm/discussions) to gather feedback before implementation.
+   - Need help? Search or post in Discussions—someone may already have solved it.
 5. **Automate Deployments:** Integrate the deployment script into your CI tooling to provision devices with known-good firmware artifacts.
 
 By following this guide you now understand not only how to operate the MQTT Pico Swarm library but also why each step exists. Keep iterating on the patterns, share improvements with your team, and treat this document as the canonical starting point for every new Pico W integration.
