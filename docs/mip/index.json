@@ -1,0 +1,8 @@
+{
+  "packages": {
+    "mqtt-pico-swarm": {
+      "version": "1.0.0",
+      "manifest": "https://example.com/mqtt-pico-swarm/mqtt-pico-swarm.json"
+    }
+  }
+}

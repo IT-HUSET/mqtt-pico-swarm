@@ -1,0 +1,54 @@
+name: Publish mip package
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build mip package
+        run: python scripts/build_mip_package.py
+
+      - name: Generate manifest and index
+        env:
+          BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: |
+          python scripts/generate_mip_manifest.py \
+            --staging-dir build/mip \
+            --base-url "${BASE_URL}/lib" \
+            --manifest-output build/mip/mqtt-pico-swarm.json \
+            --index-output build/mip/index.json \
+            --manifest-url "${BASE_URL}/mqtt-pico-swarm.json"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload mip package artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/mip
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
