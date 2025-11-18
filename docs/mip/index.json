@@ -2,7 +2,7 @@
   "packages": {
     "mqtt-pico-swarm": {
       "version": "1.1.1-SNAPSHOT",
-      "manifest": "https://it-huset.github.io/mqtt-pico-swarm/mip/mqtt-pico-swarm.json"
+      "manifest": "https://it-huset.github.io/mqtt-pico-swarm/mqtt-pico-swarm.json"
     }
   }
 }

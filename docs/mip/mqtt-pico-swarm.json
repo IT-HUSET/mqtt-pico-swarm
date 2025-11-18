@@ -5,43 +5,43 @@
   "files": [
     {
       "path": "mqtt_pico_swarm/__init__.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/mip/lib/mqtt_pico_swarm/__init__.py"
+      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/__init__.py"
     },
     {
       "path": "mqtt_pico_swarm/client.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/mip/lib/mqtt_pico_swarm/client.py"
+      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/client.py"
     },
     {
       "path": "mqtt_pico_swarm/commands.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/mip/lib/mqtt_pico_swarm/commands.py"
+      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/commands.py"
     },
     {
       "path": "mqtt_pico_swarm/config.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/mip/lib/mqtt_pico_swarm/config.py"
+      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/config.py"
     },
     {
       "path": "mqtt_pico_swarm/connection.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/mip/lib/mqtt_pico_swarm/connection.py"
+      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/connection.py"
     },
     {
       "path": "mqtt_pico_swarm/constants.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/mip/lib/mqtt_pico_swarm/constants.py"
+      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/constants.py"
     },
     {
       "path": "mqtt_pico_swarm/errors.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/mip/lib/mqtt_pico_swarm/errors.py"
+      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/errors.py"
     },
     {
       "path": "mqtt_pico_swarm/messages.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/mip/lib/mqtt_pico_swarm/messages.py"
+      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/messages.py"
     },
     {
       "path": "mqtt_pico_swarm/mqtt.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/mip/lib/mqtt_pico_swarm/mqtt.py"
+      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/mqtt.py"
     },
     {
       "path": "mqtt_pico_swarm/utils.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/mip/lib/mqtt_pico_swarm/utils.py"
+      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/utils.py"
     }
   ]
 }
