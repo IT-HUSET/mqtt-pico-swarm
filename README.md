@@ -97,8 +97,21 @@ graph TD
    ```
 
    - This copies `src/mqtt_pico_swarm/`, the internal temperature sensor example, and installs `micropython-umqtt.simple2` under `/lib/umqtt`.
-3. Copy `examples/internal-temp-sensor/config.json.example` to the board as `config.json` and update broker credentials.
-4. Provide WiFi credentials in `examples/internal-temp-sensor/main.py` (or your own bootstrap module) before running the demo.
+3. Verify the installation from a REPL session:
+
+   ```bash
+   mpremote connect auto repl
+   ```
+
+   ```python
+   >>> import mqtt_pico_swarm
+   >>> mqtt_pico_swarm.__version__
+   '1.0.1'
+   ```
+
+   Exit the REPL with `Ctrl-]` once you have confirmed the version.
+4. Copy `examples/internal-temp-sensor/config.json.example` to the board as `config.json` and update broker credentials.
+5. Provide WiFi credentials in `examples/internal-temp-sensor/main.py` (or your own bootstrap module) before running the demo.
 
 ```python
 import network
