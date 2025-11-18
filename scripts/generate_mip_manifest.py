@@ -18,6 +18,11 @@ PACKAGE_INIT = Path("src/mqtt_pico_swarm/__init__.py")
 DEFAULT_STAGING_DIR = Path("build/mip")
 DEFAULT_SUBDIR = "lib"
 DEFAULT_PACKAGE_NAME = "mqtt-pico-swarm"
+DEFAULT_SITE_ROOT = "https://it-huset.github.io/mqtt-pico-swarm"
+DEFAULT_BASE_URL = f"{DEFAULT_SITE_ROOT}/lib"
+DEFAULT_MANIFEST_OUTPUT = Path("build/mip/mqtt-pico-swarm.json")
+DEFAULT_INDEX_OUTPUT = Path("build/mip/index.json")
+DEFAULT_MANIFEST_URL = f"{DEFAULT_SITE_ROOT}/mqtt-pico-swarm.json"
 
 
 def _read_version(init_file: Path) -> Optional[str]:
@@ -99,23 +104,25 @@ def _parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--base-url",
-        required=True,
-        help="Base URL where staged files will be hosted",
+        default=DEFAULT_BASE_URL,
+        help=f"Base URL where staged files will be hosted (default: {DEFAULT_BASE_URL})",
     )
     parser.add_argument(
         "--manifest-output",
         type=Path,
-        required=True,
-        help="Destination JSON file for the manifest",
+        default=DEFAULT_MANIFEST_OUTPUT,
+        help=f"Destination JSON file for the manifest (default: {DEFAULT_MANIFEST_OUTPUT})",
     )
     parser.add_argument(
         "--index-output",
         type=Path,
-        help="Optional JSON file for mip index",
+        default=DEFAULT_INDEX_OUTPUT,
+        help=f"Optional JSON file for mip index (default: {DEFAULT_INDEX_OUTPUT})",
     )
     parser.add_argument(
         "--manifest-url",
-        help="Public URL to the manifest (required if --index-output is set)",
+        default=DEFAULT_MANIFEST_URL,
+        help=f"Public URL to the manifest (default: {DEFAULT_MANIFEST_URL})",
     )
     parser.add_argument(
         "--package-name",

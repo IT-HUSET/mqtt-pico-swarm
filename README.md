@@ -80,18 +80,22 @@ graph TD
 1. Clone the repo and install Python ≥3.9.
 2. (Optional) Create a virtual environment.
 3. Run the unit test suite:
+
    ```bash
    python -m unittest discover
    ```
+
    The desktop tests use fakes/mocks so they run without MicroPython tooling.
 
 ### Deploying to a Pico W
 
 1. Flash MicroPython 1.20+ to the board (see the [official guide](https://micropython.org/download/rp2-pico-w/)).
 2. Install the library and dependencies via the helper script:
+
    ```bash
    python scripts/deploy_demo.py --port auto --install-umqtt
    ```
+
    - This copies `src/mqtt_pico_swarm/`, the internal temperature sensor example, and installs `micropython-umqtt.simple2` under `/lib/umqtt`.
 3. Copy `examples/internal-temp-sensor/config.json.example` to the board as `config.json` and update broker credentials.
 4. Provide WiFi credentials in `examples/internal-temp-sensor/main.py` (or your own bootstrap module) before running the demo.
@@ -136,6 +140,34 @@ client.send_heartbeat()
 ```
 
 See [examples/internal-temp-sensor/main.py](examples/internal-temp-sensor/main.py) for a full loop that connects WiFi, streams the Pico W’s internal temperature sensor, sends heartbeats, and acknowledges commands.
+
+## Distributing via `mpremote mip`
+
+We host ready-to-install builds on GitHub Pages so devices can install the library with a single command.
+
+### Install on a Pico W
+
+```bash
+mpremote mip install https://it-huset.github.io/mqtt-pico-swarm/mqtt-pico-swarm.json
+```
+
+The manifest pulls every module under `/lib/mqtt_pico_swarm` on the device. Re-run the command whenever a new release goes live to upgrade in place.
+
+### Regenerate package artefacts locally
+
+Use the helper script to stage files and refresh the manifest/index in one go before publishing:
+
+```bash
+python scripts/prepare_mip_package.py
+```
+
+Key options:
+
+- `--mpy-cross PATH` – compile staged modules to `.mpy` (use `--keep-py` to retain `.py`).
+- `--skip-stage` / `--skip-manifest` – run only half of the pipeline when you already have staged files or just need to rebuild the manifest.
+- `--no-index` – skip generating `index.json` if you only need the manifest file.
+
+Outputs land in `build/mip/` by default. Once satisfied, trigger the `Publish mip package` GitHub Actions workflow (created under `.github/workflows/publish-mip.yml`) to push the artefacts to GitHub Pages at `https://it-huset.github.io/mqtt-pico-swarm/`.
 
 ## Configuration
 
@@ -191,7 +223,7 @@ Example configuration:
 
 ## Project layout
 
-```
+```text
 ├── docs/
 │   ├── API.md
 │   ├── ARCHITECTURE.md

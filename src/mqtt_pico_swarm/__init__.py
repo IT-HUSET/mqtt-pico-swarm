@@ -4,7 +4,7 @@ MQTT Pico Swarm - MicroPython MQTT client library for Raspberry Pi Pico W
 A lightweight, robust library for IoT communication using MQTT protocol.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.1-SNAPSHOT"
 __author__ = "IT-HUSET i Uppsala"
 __license__ = "MIT"
 
