@@ -8,7 +8,6 @@ index that points to the manifest URL.
 """
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -37,14 +36,6 @@ def _read_version(init_file: Path) -> Optional[str]:
     return None
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(65536), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _iter_files(base_dir: Path) -> Iterable[Path]:
     for path in sorted(base_dir.rglob("*")):
         if path.is_file():
@@ -57,24 +48,17 @@ def _normalise(path: Path) -> str:
 
 def build_manifest(staging_dir: Path, base_url: str, version: str, package_name: str) -> dict:
     base_url = base_url.rstrip("/")
-    files = []
+    urls: list[list[str]] = []
     for file_path in _iter_files(staging_dir):
         relative = file_path.relative_to(staging_dir)
         relative_str = _normalise(relative)
-        files.append(
-            {
-                "path": relative_str,
-                "url": f"{base_url}/{relative_str}",
-                "sha256": _sha256(file_path),
-                "size": file_path.stat().st_size,
-            }
-        )
+        urls.append([relative_str, f"{base_url}/{relative_str}"])
 
     return {
         "name": package_name,
         "version": version,
         "deps": [],
-        "files": files,
+        "urls": urls,
     }
 
 
@@ -150,7 +134,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     manifest = build_manifest(staging_dir, args.base_url, version, args.package_name)
     args.manifest_output.parent.mkdir(parents=True, exist_ok=True)
     args.manifest_output.write_text(json.dumps(manifest, indent=2) + "\n")
-    print(f"Wrote manifest with {len(manifest['files'])} files -> {args.manifest_output}")
+    print(f"Wrote manifest with {len(manifest['urls'])} files -> {args.manifest_output}")
 
     if args.index_output:
         if not args.manifest_url:

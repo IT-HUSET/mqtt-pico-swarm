@@ -2,66 +2,46 @@
   "name": "mqtt-pico-swarm",
   "version": "1.1.1-SNAPSHOT",
   "deps": [],
-  "files": [
-    {
-      "path": "mqtt_pico_swarm/__init__.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/__init__.py",
-      "sha256": "80eb4cc44f4ad3b4b5648326eeb68eae473e9ba379fc55d2803eb3cdbabd1d4f",
-      "size": 1092
-    },
-    {
-      "path": "mqtt_pico_swarm/client.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/client.py",
-      "sha256": "75b99044770d961bfa8205d7d6b79dfd39c2ea5b687bc90b180aec8a638f7491",
-      "size": 14765
-    },
-    {
-      "path": "mqtt_pico_swarm/commands.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/commands.py",
-      "sha256": "642a302af1e5134daa2f6951a5659fd38a497fac35457840ee755aaa36d90b89",
-      "size": 2786
-    },
-    {
-      "path": "mqtt_pico_swarm/config.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/config.py",
-      "sha256": "d037fe7d929fcb9000f473def7b7c5733caaa59d4b112575dd0c49471737101b",
-      "size": 5366
-    },
-    {
-      "path": "mqtt_pico_swarm/connection.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/connection.py",
-      "sha256": "3a3c8796d7559d562aa0875e79ab1d45a1b61788e3ab82fc0f68372e808505a4",
-      "size": 6066
-    },
-    {
-      "path": "mqtt_pico_swarm/constants.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/constants.py",
-      "sha256": "262722f5ed9f0bcf24a4b52b978a83a79d44f55e5038606719cf6c73512c2141",
-      "size": 3919
-    },
-    {
-      "path": "mqtt_pico_swarm/errors.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/errors.py",
-      "sha256": "77f577d1daabfee839d691971344b9f54dbdaeaa595f2ab618e9eab3eb0336bd",
-      "size": 725
-    },
-    {
-      "path": "mqtt_pico_swarm/messages.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/messages.py",
-      "sha256": "5c3251afd79f58782d6671cdf60ddbf8d5e8e6d88b5d0653d2fc6f3d371551eb",
-      "size": 4291
-    },
-    {
-      "path": "mqtt_pico_swarm/mqtt.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/mqtt.py",
-      "sha256": "22cae68f55de31e233b507517b706cfd142dcf8c49356e486d12f6b5f2bb3506",
-      "size": 7633
-    },
-    {
-      "path": "mqtt_pico_swarm/utils.py",
-      "url": "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/utils.py",
-      "sha256": "513bb966d5df791ec1712135a92b1d7c6f773a88805b32507d8ddbbd6947bdf4",
-      "size": 3862
-    }
+  "urls": [
+    [
+      "mqtt_pico_swarm/__init__.py",
+      "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/__init__.py"
+    ],
+    [
+      "mqtt_pico_swarm/client.py",
+      "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/client.py"
+    ],
+    [
+      "mqtt_pico_swarm/commands.py",
+      "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/commands.py"
+    ],
+    [
+      "mqtt_pico_swarm/config.py",
+      "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/config.py"
+    ],
+    [
+      "mqtt_pico_swarm/connection.py",
+      "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/connection.py"
+    ],
+    [
+      "mqtt_pico_swarm/constants.py",
+      "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/constants.py"
+    ],
+    [
+      "mqtt_pico_swarm/errors.py",
+      "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/errors.py"
+    ],
+    [
+      "mqtt_pico_swarm/messages.py",
+      "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/messages.py"
+    ],
+    [
+      "mqtt_pico_swarm/mqtt.py",
+      "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/mqtt.py"
+    ],
+    [
+      "mqtt_pico_swarm/utils.py",
+      "https://it-huset.github.io/mqtt-pico-swarm/lib/mqtt_pico_swarm/utils.py"
+    ]
   ]
 }
