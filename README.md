@@ -86,6 +86,23 @@ graph TD
    ```
 
    The desktop tests use fakes/mocks so they run without MicroPython tooling.
+4. Develop against the library directly from `src/` in your environment:
+
+   ```bash
+   # from the repo root
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   export PYTHONPATH="$(pwd)/src:${PYTHONPATH}"
+   ```
+
+   Afterwards you can use the same imports on your laptop as you do on the Pico:
+
+   ```python
+   from mqtt_pico_swarm import PicoSwarmClient
+   ```
+
+   When you are done, unset the `PYTHONPATH` export (or deactivate the virtual environment) to return to the default configuration.
 
 ### Deploying to a Pico W
 
@@ -96,14 +113,14 @@ graph TD
    mpremote mip install https://it-huset.github.io/mqtt-pico-swarm/mqtt-pico-swarm.json
    ```
 
-   Alla moduler placeras automatiskt under `/lib/mqtt_pico_swarm` och ersätts vid uppgraderingar.
-3. (Optional) Installera demo och `umqtt.robust2` med helper-scriptet:
+   All modules are placed under `/lib/mqtt_pico_swarm` automatically and are replaced on upgrades.
+3. (Optional) Install the demo and `umqtt.robust2` with the helper script:
 
    ```bash
    python scripts/deploy_demo.py --port auto --install-umqtt --skip-library
    ```
 
-   - Scriptet hoppar över biblioteket (som redan installerats via `mip`) men kopierar demo-koden och installerar `micropython-umqtt.simple2` under `/lib/umqtt`.
+   - The script skips the library (already installed via `mip`), copies the demo code, and installs `micropython-umqtt.simple2` under `/lib/umqtt`.
 4. Verifiera versionen i REPL:
 
    ```bash
@@ -116,8 +133,8 @@ graph TD
    '1.1.1-SNAPSHOT'
    ```
 
-5. Kopiera `examples/internal-temp-sensor/config.json.example` till boarden (`config.json`) och uppdatera broker-kredentialer.
-6. Lägg in WiFi-kredentialer i ditt bootstrap-script innan du kör exemplet.
+5. Copy `examples/internal-temp-sensor/config.json.example` to the board as `config.json` and update broker credentials.
+6. Add WiFi credentials to your bootstrap script before running the example.
 
 ```python
 import network
