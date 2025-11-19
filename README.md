@@ -89,15 +89,22 @@ graph TD
 
 ### Deploying to a Pico W
 
-1. Flash MicroPython 1.20+ to the board (see the [official guide](https://micropython.org/download/rp2-pico-w/)).
-2. Install the library and dependencies via the helper script:
+1. Flash MicroPython 1.21+ to the board (see the [official guide](https://micropython.org/download/rp2-pico-w/)).
+2. Install the library via `mpremote mip` (requires network access on the Pico W):
 
    ```bash
-   python scripts/deploy_demo.py --port auto --install-umqtt
+   mpremote mip install https://it-huset.github.io/mqtt-pico-swarm/mqtt-pico-swarm.json
    ```
 
-   - This copies `src/mqtt_pico_swarm/`, the internal temperature sensor example, and installs `micropython-umqtt.simple2` under `/lib/umqtt`.
-3. Verify the installation from a REPL session:
+   Alla moduler placeras automatiskt under `/lib/mqtt_pico_swarm` och ersätts vid uppgraderingar.
+3. (Optional) Installera demo och `umqtt.robust2` med helper-scriptet:
+
+   ```bash
+   python scripts/deploy_demo.py --port auto --install-umqtt --skip-library
+   ```
+
+   - Scriptet hoppar över biblioteket (som redan installerats via `mip`) men kopierar demo-koden och installerar `micropython-umqtt.simple2` under `/lib/umqtt`.
+4. Verifiera versionen i REPL:
 
    ```bash
    mpremote connect auto repl
@@ -106,12 +113,11 @@ graph TD
    ```python
    >>> import mqtt_pico_swarm
    >>> mqtt_pico_swarm.__version__
-   '1.0.1'
+   '1.1.1-SNAPSHOT'
    ```
 
-   Exit the REPL with `Ctrl-]` once you have confirmed the version.
-4. Copy `examples/internal-temp-sensor/config.json.example` to the board as `config.json` and update broker credentials.
-5. Provide WiFi credentials in `examples/internal-temp-sensor/main.py` (or your own bootstrap module) before running the demo.
+5. Kopiera `examples/internal-temp-sensor/config.json.example` till boarden (`config.json`) och uppdatera broker-kredentialer.
+6. Lägg in WiFi-kredentialer i ditt bootstrap-script innan du kör exemplet.
 
 ```python
 import network
@@ -164,7 +170,7 @@ We host ready-to-install builds on GitHub Pages so devices can install the libra
 mpremote mip install https://it-huset.github.io/mqtt-pico-swarm/mqtt-pico-swarm.json
 ```
 
-The manifest pulls every module under `/lib/mqtt_pico_swarm` on the device. Re-run the command whenever a new release goes live to upgrade in place.
+Manifestet använder `urls`-formatet som MicroPython dokumenterar och placerar varje modul under `/lib/mqtt_pico_swarm`. Kör samma kommando igen när en ny release publicerats för att uppgradera in-place.
 
 ### Regenerate package artefacts locally
 
@@ -180,7 +186,9 @@ Key options:
 - `--skip-stage` / `--skip-manifest` – run only half of the pipeline when you already have staged files or just need to rebuild the manifest.
 - `--no-index` – skip generating `index.json` if you only need the manifest file.
 
-Outputs land in `build/mip/` by default. Once satisfied, trigger the `Publish mip package` GitHub Actions workflow (created under `.github/workflows/publish-mip.yml`) to push the artefacts to GitHub Pages at `https://it-huset.github.io/mqtt-pico-swarm/`.
+Utdata landar i `build/mip/` (manifest i `mqtt-pico-swarm.json`, index i `index.json`, bibliotek i `lib/`). När du är nöjd triggar du workflowet `Publish mip package` ( `.github/workflows/publish-mip.yml`) för att lägga upp artefakterna på GitHub Pages. Efter deploy går det att installera via `mpremote mip` som beskrivet ovan.
+
+> **Obs:** Manifestet måste publiceras på en statisk webbplats (GitHub Pages) och `mpremote` kräver att Pico W är uppkopplad mot internet. Om installationen misslyckas, kontrollera nätverket och att manifestet är åtkomligt via `curl`.
 
 ## Configuration
 
