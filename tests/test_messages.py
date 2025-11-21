@@ -65,6 +65,23 @@ class MessageBuilderTests(unittest.TestCase):
         self.assertEqual(qos, constants.QOS_EVENTS)
         self.assertFalse(retain)
 
+    def test_log_building(self):
+        message = self.builder.log(
+            "info",
+            "sensor.main",
+            "Startup complete",
+            context={"extra": 1},
+            timestamp="2025-01-01T03:30:00Z",
+        )
+        topic, payload, qos, retain = self._decode(message)
+        self.assertEqual(topic, constants.logs_topic("pico-123"))
+        self.assertEqual(payload["level"], "info")
+        self.assertEqual(payload["logger"], "sensor.main")
+        self.assertEqual(payload["message"], "Startup complete")
+        self.assertEqual(payload["context"]["extra"], 1)
+        self.assertEqual(qos, constants.QOS_LOGS)
+        self.assertFalse(retain)
+
     def test_command_ack_includes_status(self):
         message = self.builder.command_ack(
             command_id="cmd-42",

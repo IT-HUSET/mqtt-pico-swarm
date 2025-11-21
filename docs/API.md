@@ -458,6 +458,52 @@ if free_mem < 10000:  # Less than 10KB
 
 ---
 
+## Logging
+
+### `publish_log(level, logger, message, context=None, timestamp=None)`
+
+Publish a structured log message from the device to the hub.
+
+```python
+publish_log(level: str, logger: str, message: str,
+            context: dict | None = None, timestamp: str | None = None) -> bool
+```
+
+**Parameters:**
+- `level` (str): Log level ("debug", "info", "warn", or "error").
+- `logger` (str): Logical logger or class/source name (e.g. "soil_sensor.main").
+- `message` (str): Human-readable log message.
+- `context` (dict, optional): Additional structured metadata to include with the log.
+- `timestamp` (str, optional): ISO 8601 timestamp (auto-generated if not provided).
+
+**Returns:**
+- `True` if published successfully
+
+**QoS:** 0 (At Most Once)
+
+**Topic:** `hub/devices/{device_id}/logs`
+
+**Example - Simple Info Log:**
+```python
+client.publish_log(
+    level="info",
+    logger="soil_sensor.main",
+    message="Soil moisture sample collected"
+)
+```
+
+**Example - Log with Context:**
+```python
+client.publish_log(
+    level="debug",
+    logger="soil_sensor.main",
+    message="Raw moisture value",
+    context={"moisture_raw": raw_value}
+)
+```
+
+---
+
 ## Callbacks and Events
 
 ### `on_connect(callback)`

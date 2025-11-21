@@ -138,6 +138,13 @@ class PicoSwarmClient:
         self._connection_manager.publish(payload)
         return True
 
+    def publish_log(self, level, logger, message, context=None, timestamp=None):
+        """Publish application/device log message."""
+        self._ensure_connected()
+        msg = self._message_builder.log(level, logger, message, context=context, timestamp=timestamp)
+        self._connection_manager.publish(msg)
+        return True
+
     def acknowledge_command(self, command_id, status, message="", result="", timestamp=None):
         """Publish command acknowledgement."""
         self._ensure_connected()

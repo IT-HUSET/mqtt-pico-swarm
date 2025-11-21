@@ -105,6 +105,24 @@ class MessageBuilder:
             constants.RETAIN_EVENTS,
         )
 
+    def log(self, level, logger, message, context=None, timestamp=None):
+        payload = {
+            "device_id": self._device_id,
+            "level": level,
+            "logger": logger,
+            "message": message,
+            "timestamp": _ensure_timestamp(timestamp),
+        }
+        if context:
+            payload["context"] = context
+
+        return _build_message(
+            constants.logs_topic(self._device_id),
+            payload,
+            constants.QOS_LOGS,
+            constants.RETAIN_LOGS,
+        )
+
     def command_ack(self, command_id, status, message="", result="", timestamp=None):
         payload = {
             "command_id": command_id,

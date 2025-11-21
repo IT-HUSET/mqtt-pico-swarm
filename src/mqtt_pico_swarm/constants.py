@@ -17,6 +17,7 @@ TOPIC_STATUS_SUFFIX = "/status"
 TOPIC_DATA_SUFFIX = "/data"
 TOPIC_HEARTBEAT_SUFFIX = "/heartbeat"
 TOPIC_EVENTS_SUFFIX = "/events"
+TOPIC_LOGS_SUFFIX = "/logs"
 TOPIC_COMMANDS_SUFFIX = "/commands"
 TOPIC_COMMAND_ACK_SUFFIX = "/commands/ack"
 
@@ -55,6 +56,7 @@ QOS_EXACTLY_ONCE = 2
 QOS_STATUS = QOS_AT_LEAST_ONCE
 QOS_DATA = QOS_AT_LEAST_ONCE
 QOS_EVENTS = QOS_AT_LEAST_ONCE
+QOS_LOGS = QOS_AT_MOST_ONCE
 QOS_HEARTBEAT = QOS_AT_MOST_ONCE
 QOS_COMMAND_CONFIG = QOS_EXACTLY_ONCE
 QOS_COMMAND_ACTION = QOS_AT_LEAST_ONCE
@@ -70,6 +72,7 @@ QOS_BROADCAST_TIME = QOS_AT_LEAST_ONCE
 RETAIN_STATUS = True
 RETAIN_DATA = False
 RETAIN_EVENTS = False
+RETAIN_LOGS = False
 RETAIN_HEARTBEAT = False
 RETAIN_COMMAND = False
 RETAIN_COMMAND_ACK = False
@@ -129,3 +132,8 @@ def heartbeat_topic(device_id):
 def events_topic(device_id):
     """Return events topic for a device."""
     return device_topic(device_id, TOPIC_EVENTS_SUFFIX)
+
+
+def logs_topic(device_id):
+    """Return log topic for a device."""
+    return device_topic(device_id, TOPIC_LOGS_SUFFIX)

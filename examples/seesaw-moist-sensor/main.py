@@ -42,7 +42,7 @@ I2C_FREQUENCY = 100000
 
 CONFIG_FILE = "config.json"
 NETWORK_SSID = "ITH"
-NETWORK_PASSWORD = "xxx"
+NETWORK_PASSWORD = "Flyttkartong.99!"
 PUBLISH_INTERVAL = 60  # seconds
 
 # Replace these with your measured dry/wet reference points to enable calibration.
@@ -141,6 +141,16 @@ def main():
             )
         )
         publish_soil_sample(client, moisture, temperature_c, percent)
+        client.publish_log(
+            level="debug",
+            logger="soil_sensor.main",
+            message="Soil sample publicerad",
+            context={
+                "moisture_raw": moisture,
+                "temperature_c": round(temperature_c, 2),
+                "moisture_percent": round(percent, 1) if percent is not None else None,
+            },
+        )
 
     @client.on_command(COMMAND_TYPE_TRIGGER_DATA)
     def handle_trigger_data(command):
@@ -159,7 +169,11 @@ def main():
             "boot",
             "Soil sensor online",
         )
-
+        client.publish_log(
+            level="info",
+            logger="soil_sensor.main",
+            message="Soil sensor-klient uppstartad och ansluten",
+        )
         _log("Startar huvudloopen. Tryck Ctrl+C för att avsluta.")
         last_publish = 0
         heartbeat_interval = client.get_config().get("heartbeat_interval", 60)

@@ -137,6 +137,12 @@ def main():
             "sensor": "pico_w_cpu",
         }
         client.publish_data("temperature", payload)
+        client.publish_log(
+            level="debug",
+            logger="internal_temp.main",
+            message="Temperaturmätning utförd",
+            context={"temperature_c": temperature_c},
+        )
         try:
             now_rtc = time.localtime()
             _log(
@@ -224,6 +230,11 @@ def main():
             constants.EVENT_TYPE_INFO,
             "boot",
             "Enheten är online",
+        )
+        client.publish_log(
+            level="info",
+            logger="internal_temp.main",
+            message="Klient uppstartad och ansluten",
         )
 
         _log("Startar huvudloopen. Tryck Ctrl+C för att avsluta.")

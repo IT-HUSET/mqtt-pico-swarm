@@ -75,6 +75,7 @@ Every topic below uses `{device_id}` as the routing key. This is the same value 
 | `hub/devices/{device_id}/heartbeat` | Periodic heartbeat signal | 0 | No | Every 60 seconds |
 | `hub/devices/{device_id}/data` | Sensor/event data from device | 1 | No | Event-driven |
 | `hub/devices/{device_id}/events` | Device events (errors, warnings) | 1 | No | Event-driven |
+| `hub/devices/{device_id}/logs` | Application/device log messages | 0 | No | Event-driven |
 
 #### **Device Command Topics** (Hub -> Pico W)
 
@@ -215,7 +216,36 @@ Every topic below uses `{device_id}` as the routing key. This is the same value 
 - `severity` (string): "critical", "error", "warning", "info"
 - `timestamp` (ISO 8601): When event occurred
 
-### 5. Command Message
+### 5. Log Message
+
+**Topic:** `hub/devices/{device_id}/logs`
+
+**Payload (JSON):**
+
+```json
+{
+  "device_id": "pico-001",
+  "level": "info",
+  "logger": "soil_sensor.main",
+  "message": "Soil moisture sample collected",
+  "timestamp": "2025-11-05T10:37:25Z",
+  "context": {
+    "moisture_raw": 1023,
+    "retry_count": 0
+  }
+}
+```
+
+**Fields:**
+
+- `device_id` (string): Unique device identifier
+- `level` (string): Log level ("debug", "info", "warn", "error")
+- `logger` (string): Logical logger or class/source name
+- `message` (string): Human-readable log message
+- `timestamp` (ISO 8601): When log entry was created
+- `context` (object, optional): Additional structured metadata for the log entry
+
+### 6. Command Message
 
 **Topic:** `hub/devices/{device_id}/commands/{command_type}`
 
