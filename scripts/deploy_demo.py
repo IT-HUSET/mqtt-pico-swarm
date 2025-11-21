@@ -16,13 +16,15 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_SRC = REPO_ROOT / "src" / "mqtt_pico_swarm"
-DEMO_MAIN = REPO_ROOT / "examples" / "internal-temp-sensor" / "main.py"
-DEMO_CONFIG = REPO_ROOT / "examples" / "internal-temp-sensor" / "config.json"
+DEMOS = {
+    "internal-temp-sensor": REPO_ROOT / "examples" / "internal-temp-sensor",
+    "seesaw-moist-sensor": REPO_ROOT / "examples" / "seesaw-moist-sensor",
+}
 UMQTT_PACKAGE = "micropython-umqtt.simple2"
 
 
-def _ensure_paths_exist() -> None:
-    required = [PACKAGE_SRC, DEMO_MAIN]
+def _ensure_paths_exist(project_root: Path) -> None:
+    required = [PACKAGE_SRC, project_root / "main.py"]
     missing = [path for path in required if not path.exists()]
     if missing:
         print("Följande filer/kataloger saknas:")
@@ -119,9 +121,43 @@ def _install_umqtt(port: str) -> None:
         print("umqtt.simple2 installerad.")
 
 
+def _prompt_project_name(default: str) -> str:
+    print("Tillgängliga demos:")
+    for idx, name in enumerate(sorted(DEMOS.keys()), start=1):
+        print(f"  {idx}. {name}")
+    response = input(f"Vilken demo vill du deploya? [{default}] ")
+    response = response.strip()
+    if not response:
+        return default
+    if response in DEMOS:
+        return response
+    try:
+        idx = int(response)
+    except ValueError as error:  # pragma: no cover - endast interaktivt
+        raise SystemExit(f"Okänt demoval: {response}") from error
+    options = sorted(DEMOS.keys())
+    if 1 <= idx <= len(options):
+        return options[idx - 1]
+    raise SystemExit(f"Demoval #{idx} finns inte. Välj mellan 1 och {len(options)}.")
+
+
+def _resolve_project(project_arg: str | None) -> tuple[str, Path]:
+    default = "internal-temp-sensor"
+    if project_arg:
+        name = project_arg
+    else:
+        name = _prompt_project_name(default)
+
+    if name not in DEMOS:
+        raise SystemExit(
+            "Okänt projektnamn. Tillgängliga värden: " + ", ".join(sorted(DEMOS.keys()))
+        )
+    return name, DEMOS[name]
+
+
 def main(argv: list[str] | None = None) -> int:
     print("börjar...")
-    parser = argparse.ArgumentParser(description="Deploy basic Pico demo via mpremote")
+    parser = argparse.ArgumentParser(description="Deploy Pico demo via mpremote")
     parser.add_argument(
         "--port",
         default="auto",
@@ -137,9 +173,18 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Hämta och installera micropython-umqtt.simple2 på Pico W",
     )
+    parser.add_argument(
+        "--project",
+        default=None,
+        help="Sätt vilket demo-projekt som ska deployas utan prompt (internal-temp-sensor, seesaw-moist-sensor)",
+    )
     args = parser.parse_args(argv)
 
-    _ensure_paths_exist()
+    project_name, project_root = _resolve_project(args.project)
+    demo_main = project_root / "main.py"
+    demo_config = project_root / "config.json"
+
+    _ensure_paths_exist(project_root)
 
     # Se till att lib-katalogen finns
     _run_mpremote(args.port, "fs", "mkdir", "lib", check=False)
@@ -160,22 +205,24 @@ def main(argv: list[str] | None = None) -> int:
     _run_mpremote(
         args.port,
         "cp",
-        str(DEMO_MAIN),
+        str(demo_main),
         ":main.py",
     )
 
     if not args.skip_config:
-        if DEMO_CONFIG.exists():
+        if demo_config.exists():
             _run_mpremote(
                 args.port,
                 "cp",
-                str(DEMO_CONFIG),
+                str(demo_config),
                 ":config.json",
             )
         else:
             print("Varning: config.json saknas lokalt – hoppar över kopiering.")
 
-    print("\nKlar! Tryck Ctrl+D i REPL och kör 'import main'.")
+    print(
+        f"\nKlar! Deployade '{project_name}'. Tryck Ctrl+D i REPL och kör 'import main'."
+    )
     return 0
 
 

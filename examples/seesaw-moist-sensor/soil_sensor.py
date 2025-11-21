@@ -46,7 +46,11 @@ Implementation Notes
 """
 
 import time
-import ustruct
+
+try:
+    import ustruct as struct
+except ImportError:
+    import struct
 
 try:
     from micropython import const
@@ -72,7 +76,7 @@ class StemmaSoilSensor(seesaw.Seesaw):
         buf = bytearray(4)
         self._read(seesaw.STATUS_BASE, _STATUS_TEMP, buf, .005)
         buf[0] = buf[0] & 0x3F
-        ret = ustruct.unpack(">I", buf)[0]
+        ret = struct.unpack(">I", buf)[0]
         return 0.00001525878 * ret
 
     def chip_id(self):
@@ -82,14 +86,14 @@ class StemmaSoilSensor(seesaw.Seesaw):
         buf = bytearray(2)
 
         self._read(seesaw.TOUCH_BASE, _TOUCH_CHANNEL_OFFSET, buf, .005)
-        ret = ustruct.unpack(">H", buf)[0]
+        ret = struct.unpack(">H", buf)[0]
         time.sleep(.001)
 
         # retry if reading was bad
         count = 0
         while ret > 4095:
             self._read(seesaw.TOUCH_BASE, _TOUCH_CHANNEL_OFFSET, buf, .005)
-            ret = ustruct.unpack(">H", buf)[0]
+            ret = struct.unpack(">H", buf)[0]
             time.sleep(.001)
             count += 1
             if count > 3:
