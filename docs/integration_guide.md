@@ -284,7 +284,13 @@ cp examples/internal-temp-sensor/config.template.json examples/internal-temp-sen
 
 Open `config.json` and modify the WiFi and MQTT credentials to match the ones verified earlier. Double-check the `device_id`; it is used in topic construction and must be unique per device.
 
-**Why:** A misconfigured device ID will lead to clashing MQTT topics when you deploy multiple devices, causing incorrect command routing and telemetry attribution.
+> **Device identity cheat sheet**
+>
+> - `device_id` — appears in every MQTT topic/payload (e.g. `hub/devices/{device_id}/status`). It must be globally unique across your fleet so the hub can route telemetry and commands correctly.
+> - `mqtt.client_id` — the session identifier presented to the MQTT broker. If omitted in the config it automatically inherits `device_id`, but you can override it when you need a different broker-side identity.
+> - Changing one **does not** update the other; keep them aligned unless you have a specific broker policy that requires distinct values.
+
+**Why:** A misconfigured device ID will lead to clashing MQTT topics when you deploy multiple devices, causing incorrect command routing and telemetry attribution. Likewise, duplicate `mqtt.client_id` values make brokers disconnect existing sessions, so it pays to understand the distinction early.
 
 ### Step 2: Inspect the Example Application
 

@@ -65,6 +65,8 @@ hub/
 
 ### 2. Detailed Topic Definitions
 
+Every topic below uses `{device_id}` as the routing key. This is the same value you configure in `config.json` under `device_id`. The MQTT session identifier (`mqtt.client_id`) is independent; by default it inherits `device_id`, but brokers will treat it purely as the client connection name. Always keep `device_id` unique to avoid topic clashes, and ensure `mqtt.client_id` is unique to avoid the broker disconnecting active sessions.
+
 #### **Device Status Topics** (Hub <- Pico W)
 
 | Topic | Purpose | QoS | Retained | Frequency |

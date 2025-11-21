@@ -19,8 +19,8 @@ from mqtt_pico_swarm.errors import ConnectionError
 from mqtt_pico_swarm.utils import current_timestamp, log
 
 CONFIG_FILE = "config.json"
-NETWORK_SSID = "kumliens"
-NETWORK_PASSWORD = "xxx"
+NETWORK_SSID = "ITH"
+NETWORK_PASSWORD = "Flyttkartong.99!"
 PUBLISH_INTERVAL = 60
 TEMPERATURE_CALIBRATION_OFFSET = 0.0  # Justera vid behov för att kalibrera mot extern termometer
 
