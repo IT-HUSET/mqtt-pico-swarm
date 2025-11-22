@@ -180,6 +180,77 @@ client.start()
 
 ---
 
+## Capabilities
+
+### `publish_capabilities(capabilities)`
+
+Publish a structured capabilities specification describing the device's
+sensors and supported commands. This message is **retained** on the broker so
+the hub can reconstruct the current capabilities even if the device is
+offline.
+
+```python
+publish_capabilities(capabilities: dict) -> bool
+```
+
+**Parameters:**
+- `capabilities` (dict): A JSON-serialisable dictionary that follows the
+  capabilities schema described in `PROTOCOL.md` (section "Device
+  Capabilities Message"). At minimum it SHOULD contain:
+  - `sensors`: list of sensor descriptors
+  - `commands`: list of command descriptors
+
+The library will automatically inject:
+
+- `device_id` – from the active configuration
+- `device_type` – from the active configuration
+- `firmware_version` – from configuration (if present)
+- `schema_version` – currently `1` if not already set
+
+**Returns:**
+- `True` if published successfully
+
+**QoS:** 1 (At Least Once)
+
+**Topic:** `hub/devices/{device_id}/capabilities` (retained)
+
+**Example - Simple Capabilities:**
+
+```python
+CAPABILITIES = {
+    "sensors": [
+        {
+            "id": "cpu_temp",
+            "display_name": "CPU-temperatur",
+            "sensor_type": "temperature",
+            "data_source": {"sensor_type": "temperature", "path": "data"},
+            "measures": [
+                {
+                    "key": "temperature_c",
+                    "display_name": "Temperatur",
+                    "unit": "°C",
+                    "value_type": "number",
+                    "precision": 2,
+                }
+            ],
+        }
+    ],
+    "commands": [
+        {
+            "id": "trigger_data",
+            "display_name": "Trigga mätning nu",
+            "command_type": "trigger-data",
+            "topic_suffix": "commands/trigger-data",
+            "parameters": [],
+        },
+    ],
+}
+
+client.publish_capabilities(CAPABILITIES)
+```
+
+---
+
 ## Data Publishing
 
 ### `publish_data(sensor_type, data, unit=None, timestamp=None)`

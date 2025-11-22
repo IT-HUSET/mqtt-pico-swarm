@@ -24,6 +24,51 @@ NETWORK_PASSWORD = "xxx"
 PUBLISH_INTERVAL = 60
 TEMPERATURE_CALIBRATION_OFFSET = 0.0  # Justera vid behov för att kalibrera mot extern termometer
 
+CAPABILITIES = {
+    "sensors": [
+        {
+            "id": "cpu_temp",
+            "display_name": "CPU-temperatur",
+            "sensor_type": "temperature",
+            "data_source": {"sensor_type": "temperature", "path": "data"},
+            "measures": [
+                {
+                    "key": "temperature_c",
+                    "display_name": "Temperatur",
+                    "unit": "C",
+                    "value_type": "number",
+                    "precision": 2,
+                }
+            ],
+        }
+    ],
+    "commands": [
+        {
+            "id": "trigger_data",
+            "display_name": "Trigga mätning nu",
+            "command_type": "trigger-data",
+            "topic_suffix": "commands/trigger-data",
+            "parameters": [],
+        },
+        {
+            "id": "light",
+            "display_name": "Onboard LED",
+            "command_type": "light",
+            "topic_suffix": "commands/light",
+            "parameters": [
+                {
+                    "name": "state",
+                    "display_name": "Tillstånd",
+                    "type": "enum",
+                    "values": ["on", "off", "toggle"],
+                    "required": True,
+                    "default": "on",
+                }
+            ],
+        },
+    ],
+}
+
 if machine is not None:
     _temperature_sensor = machine.ADC(4)
     try:
@@ -65,7 +110,7 @@ def _apply_light_action(action, state):
     if _light_output is None:
         raise ValueError("Device has no controllable LED")
 
-    if action == "toggle":
+    if action == "toggle" or (action == "set" and state == "toggle"):
         _write_light_state(not _current_light_state)
         return True
 
@@ -173,8 +218,16 @@ def main():
             return False
 
         command_id = command.get("commandId") or command.get("command_id")
-        action = str(command.get("action") or "set").lower()
+        raw_action = command.get("action")
         state = str(command.get("state") or "").lower()
+
+        if raw_action is not None:
+            action = str(raw_action).lower()
+        else:
+            if state == "toggle":
+                action = "toggle"
+            else:
+                action = "set"
 
         status = "success"
         message = ""
@@ -236,6 +289,7 @@ def main():
             logger="internal_temp.main",
             message="Klient uppstartad och ansluten",
         )
+        client.publish_capabilities(CAPABILITIES)
 
         _log("Startar huvudloopen. Tryck Ctrl+C för att avsluta.")
         last_publish = 0

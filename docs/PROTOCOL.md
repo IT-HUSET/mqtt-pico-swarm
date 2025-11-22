@@ -54,6 +54,8 @@ hub/
       data
       heartbeat
       events
+      logs
+      capabilities
       commands/
         {command_type}
     registry
@@ -76,6 +78,7 @@ Every topic below uses `{device_id}` as the routing key. This is the same value 
 | `hub/devices/{device_id}/data` | Sensor/event data from device | 1 | No | Event-driven |
 | `hub/devices/{device_id}/events` | Device events (errors, warnings) | 1 | No | Event-driven |
 | `hub/devices/{device_id}/logs` | Application/device log messages | 0 | No | Event-driven |
+| `hub/devices/{device_id}/capabilities` | Device capabilities (sensors, commands) | 1 | Yes | On connect / capability change |
 
 #### **Device Command Topics** (Hub -> Pico W)
 
@@ -342,6 +345,100 @@ Every topic below uses `{device_id}` as the routing key. This is the same value 
   "timestamp": "2025-11-05T10:37:00Z"
 }
 ```
+
+### 8. Device Capabilities Message
+
+**Topic:** `hub/devices/{device_id}/capabilities`
+
+**QoS:** 1 (At Least Once)  
+**Retained:** Yes (latest capabilities are always available to the hub)
+
+**Payload (JSON):**
+
+```json
+{
+  "schema_version": 1,
+  "device_id": "pico-001",
+  "device_type": "soil_sensor",
+  "friendly_name": "Soil sensor växthus A",
+  "firmware_version": "1.2.0",
+  "sensors": [
+    {
+      "id": "soil",
+      "display_name": "Jordfuktighet",
+      "sensor_type": "soil",
+      "data_source": {
+        "sensor_type": "soil",
+        "path": "data"
+      },
+      "measures": [
+        {
+          "key": "moisture_percent",
+          "display_name": "Jordfukt %",
+          "unit": "%",
+          "value_type": "number",
+          "min": 0,
+          "max": 100,
+          "precision": 1
+        },
+        {
+          "key": "temperature_c",
+          "display_name": "Temperatur",
+          "unit": "°C",
+          "value_type": "number",
+          "precision": 2
+        }
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "id": "trigger_data",
+      "display_name": "Trigga mätning nu",
+      "command_type": "trigger-data",
+      "topic_suffix": "commands/trigger-data",
+      "parameters": []
+    },
+    {
+      "id": "light",
+      "display_name": "Onboard LED",
+      "command_type": "light",
+      "topic_suffix": "commands/light",
+      "parameters": [
+        {
+          "name": "state",
+          "display_name": "Tillstånd",
+          "type": "enum",
+          "values": ["on", "off"],
+          "required": true,
+          "default": "on"
+        }
+      ]
+    }
+  ],
+  "ui_hints": {},
+  "extensions": {}
+}
+```
+
+**Fields (top level):**
+
+- `schema_version` (int): Capabilities schema version (currently `1`).
+- `device_id` (string): Unique device identifier (added automatically by the library).
+- `device_type` (string): Logical device type, mirroring `status` messages.
+- `friendly_name` (string, optional): Human-friendly label for use in UI.
+- `firmware_version` (string, optional): Firmware identifier.
+- `sensors` (array): List of sensor capability descriptors.
+- `commands` (array): List of supported command descriptors.
+- `ui_hints` (object, optional): Hints for UI layout/grouping.
+- `extensions` (object, optional): Vendor/project-specific metadata.
+
+**Notes:**
+
+- The **hub** can use `sensors` and `commands` to dynamically generate dashboards
+  and command forms without hardcoding individual device types.
+- Devices SHOULD republish capabilities when a firmware upgrade changes the
+  available sensors or commands.
 
 ---
 

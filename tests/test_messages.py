@@ -82,6 +82,28 @@ class MessageBuilderTests(unittest.TestCase):
         self.assertEqual(qos, constants.QOS_LOGS)
         self.assertFalse(retain)
 
+    def test_capabilities_building(self):
+        spec = {
+            "device_type": "soil_sensor",
+            "sensors": [
+                {
+                    "id": "soil",
+                    "measures": [
+                        {"key": "moisture_percent", "value_type": "number"},
+                    ],
+                }
+            ],
+        }
+        message = self.builder.capabilities(spec)
+        topic, payload, qos, retain = self._decode(message)
+        self.assertEqual(topic, constants.capabilities_topic("pico-123"))
+        self.assertEqual(payload["device_id"], "pico-123")
+        self.assertEqual(payload["device_type"], "temperature_sensor")
+        self.assertEqual(payload["schema_version"], 1)
+        self.assertIn("sensors", payload)
+        self.assertEqual(qos, constants.QOS_CAPABILITIES)
+        self.assertTrue(retain)
+
     def test_command_ack_includes_status(self):
         message = self.builder.command_ack(
             command_id="cmd-42",

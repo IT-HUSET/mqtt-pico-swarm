@@ -145,6 +145,13 @@ class PicoSwarmClient:
         self._connection_manager.publish(msg)
         return True
 
+    def publish_capabilities(self, capabilities):
+        """Publish device capabilities specification (retained)."""
+        self._ensure_connected()
+        msg = self._message_builder.capabilities(capabilities)
+        self._connection_manager.publish(msg)
+        return True
+
     def acknowledge_command(self, command_id, status, message="", result="", timestamp=None):
         """Publish command acknowledgement."""
         self._ensure_connected()

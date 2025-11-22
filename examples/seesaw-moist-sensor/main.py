@@ -16,7 +16,7 @@ except ImportError:  # pragma: no cover
 
 from mqtt_pico_swarm import constants
 from mqtt_pico_swarm.client import PicoSwarmClient
-from mqtt_pico_swarm.constants import COMMAND_TYPE_TRIGGER_DATA
+from mqtt_pico_swarm.constants import COMMAND_TYPE_LIGHT, COMMAND_TYPE_TRIGGER_DATA
 from mqtt_pico_swarm.errors import ConnectionError
 from mqtt_pico_swarm.utils import current_timestamp, log
 
@@ -41,17 +41,115 @@ I2C_SDA_PIN = 0
 I2C_FREQUENCY = 100000
 
 CONFIG_FILE = "config.json"
-NETWORK_SSID = "ITH"
-NETWORK_PASSWORD = "Flyttkartong.99!"
+NETWORK_SSID = "kumliens"
+NETWORK_PASSWORD = "xxx"
 PUBLISH_INTERVAL = 60  # seconds
 
 # Replace these with your measured dry/wet reference points to enable calibration.
 CALIBRATION_DRY = 325
 CALIBRATION_WET = 1016
 
+CAPABILITIES = {
+    "sensors": [
+        {
+            "id": "soil",
+            "display_name": "Jordfuktighet",
+            "sensor_type": "soil",
+            "data_source": {"sensor_type": "soil", "path": "data"},
+            "measures": [
+                {
+                    "key": "moisture_percent",
+                    "display_name": "Jordfukt %",
+                    "unit": "%",
+                    "value_type": "number",
+                    "min": 0,
+                    "max": 100,
+                    "precision": 1,
+                },
+                {
+                    "key": "temperature_c",
+                    "display_name": "Temperatur",
+                    "unit": "°C",
+                    "value_type": "number",
+                    "precision": 2,
+                },
+            ],
+        }
+    ],
+    "commands": [
+        {
+            "id": "trigger_data",
+            "display_name": "Trigga mätning nu",
+            "command_type": "trigger-data",
+            "topic_suffix": "commands/trigger-data",
+            "parameters": [],
+        },
+        {
+            "id": "light",
+            "display_name": "Onboard LED",
+            "command_type": "light",
+            "topic_suffix": "commands/light",
+            "parameters": [
+                {
+                    "name": "state",
+                    "display_name": "Tillstånd",
+                    "type": "enum",
+                    "values": ["on", "off", "toggle"],
+                    "required": True,
+                    "default": "on",
+                }
+            ],
+        },
+    ],
+}
+
+if Pin is not None:
+    try:
+        _light_output = Pin("LED", Pin.OUT)
+    except (ValueError, AttributeError):
+        try:
+            _light_output = Pin(25, Pin.OUT)
+        except (ValueError, AttributeError):
+            _light_output = None
+else:
+    _light_output = None
+
+try:
+    _current_light_state = bool(_light_output.value()) if _light_output is not None else False
+except Exception:
+    _current_light_state = False
+
 
 def _log(message):
     log(True, message, prefix="[SoilExample]")
+
+
+def _write_light_state(enabled):
+    if _light_output is None:
+        raise ValueError("Device has no controllable LED")
+    try:
+        _light_output.value(1 if enabled else 0)
+    except Exception as error:
+        raise ValueError("Failed to drive LED: {}".format(error)) from error
+    global _current_light_state
+    _current_light_state = bool(enabled)
+
+
+def _apply_light_action(action, state):
+    if _light_output is None:
+        raise ValueError("Device has no controllable LED")
+
+    if action == "toggle" or (action == "set" and state == "toggle"):
+        _write_light_state(not _current_light_state)
+        return True
+
+    if action == "set":
+        if state not in ("on", "off"):
+            return False
+        _write_light_state(state == "on")
+        return True
+
+    raise ValueError("Unknown action: {}".format(action))
 
 
 def connect_wifi(ssid, password, timeout=20):
@@ -152,6 +250,65 @@ def main():
             },
         )
 
+
+    @client.on_command(COMMAND_TYPE_LIGHT)
+    def handle_light(command):
+        if not isinstance(command, dict):
+            _log("Ignorerar light-kommando utan JSON-payload: {}".format(command))
+            return False
+
+        command_id = command.get("commandId") or command.get("command_id")
+        raw_action = command.get("action")
+        state = str(command.get("state") or "").lower()
+
+        if raw_action is not None:
+            action = str(raw_action).lower()
+        else:
+            if state == "toggle":
+                action = "toggle"
+            else:
+                action = "set"
+
+        status = "success"
+        message = ""
+        handled = False
+
+        try:
+            handled = _apply_light_action(action, state)
+        except ValueError as error:
+            status = "failed"
+            message = str(error)
+        else:
+            if not handled:
+                status = "failed"
+                message = "Unsupported state value" if action == "set" else "Toggle failed"
+
+        if not command_id:
+            if status == "failed":
+                _log(
+                    "Light-kommando misslyckades utan commandId: {}".format(
+                        message or command
+                    )
+                )
+            return handled
+
+        result = {"current_state": "on" if _current_light_state else "off"}
+        if "brightness" in command:
+            result["current_brightness"] = command.get("brightness")
+        if "color" in command:
+            result["current_color"] = command.get("color")
+
+        if status == "success" and not message:
+            message = "LED uppdaterad"
+
+        client.acknowledge_command(
+            command_id,
+            status,
+            message=message,
+            result=result,
+        )
+        return handled
+
     @client.on_command(COMMAND_TYPE_TRIGGER_DATA)
     def handle_trigger_data(command):
         command_id = None
@@ -174,6 +331,7 @@ def main():
             logger="soil_sensor.main",
             message="Soil sensor-klient uppstartad och ansluten",
         )
+        client.publish_capabilities(CAPABILITIES)
         _log("Startar huvudloopen. Tryck Ctrl+C för att avsluta.")
         last_publish = 0
         heartbeat_interval = client.get_config().get("heartbeat_interval", 60)

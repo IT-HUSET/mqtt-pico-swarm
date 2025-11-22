@@ -123,6 +123,22 @@ class MessageBuilder:
             constants.RETAIN_LOGS,
         )
 
+    def capabilities(self, spec):
+        payload = dict(spec or {})
+        payload["device_id"] = self._device_id
+        if self._device_type:
+            payload["device_type"] = self._device_type
+        if self._firmware_version:
+            payload.setdefault("firmware_version", self._firmware_version)
+        payload.setdefault("schema_version", 1)
+
+        return _build_message(
+            constants.capabilities_topic(self._device_id),
+            payload,
+            constants.QOS_CAPABILITIES,
+            constants.RETAIN_CAPABILITIES,
+        )
+
     def command_ack(self, command_id, status, message="", result="", timestamp=None):
         payload = {
             "command_id": command_id,
