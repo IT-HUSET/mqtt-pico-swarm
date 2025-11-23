@@ -1,0 +1,15 @@
+{
+    "device_id": "pico2W-003",
+    "device_type": "temperature_sensor",
+    "firmware_version": "1.0.0",
+    "heartbeat_interval": 60,
+    "reconnect_delay": 5,
+    "max_reconnect_attempts": 10,
+    "mqtt": {
+        "broker": "192.168.1.100",
+        "port": 1883,
+        "keepalive": 60,
+        "client_id": "pico2-external-temp",
+        "clean_session": false
+    }
+}

@@ -19,8 +19,13 @@ PACKAGE_SRC = REPO_ROOT / "src" / "mqtt_pico_swarm"
 DEMOS = {
     "internal-temp-sensor": REPO_ROOT / "examples" / "internal-temp-sensor",
     "seesaw-moist-sensor": REPO_ROOT / "examples" / "seesaw-moist-sensor",
+    "external-temp-sensor": REPO_ROOT / "examples" / "external-temp-sensor",
 }
 UMQTT_PACKAGE = "micropython-umqtt.simple2"
+DS18X20_URL = (
+    "https://raw.githubusercontent.com/micropython/micropython/"
+    "master/drivers/onewire/ds18x20.py"
+)
 
 
 def _ensure_paths_exist(project_root: Path) -> None:
@@ -121,6 +126,24 @@ def _install_umqtt(port: str) -> None:
         print("umqtt.simple2 installerad.")
 
 
+def _install_ds18x20(port: str) -> None:
+    print("Installerar ds18x20 på enheten...")
+    with tempfile.TemporaryDirectory() as tmpdir_str:
+        tmpdir = Path(tmpdir_str)
+        module_path = Path(tmpdir) / "ds18x20.py"
+
+        try:
+            with urllib.request.urlopen(DS18X20_URL) as response:  # type: ignore[attr-defined]
+                module_path.write_bytes(response.read())
+        except Exception as error:  # pragma: no cover - nätverksfel bara vid runtime
+            raise SystemExit(f"Misslyckades att ladda ned ds18x20.py: {error}") from error
+
+        _run_mpremote(port, "fs", "mkdir", "lib", check=False)
+        _run_mpremote(port, "cp", str(module_path), ":/lib/ds18x20.py")
+
+    print("ds18x20 installerad.")
+
+
 def _prompt_project_name(default: str) -> str:
     print("Tillgängliga demos:")
     for idx, name in enumerate(sorted(DEMOS.keys()), start=1):
@@ -176,7 +199,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--project",
         default=None,
-        help="Sätt vilket demo-projekt som ska deployas utan prompt (internal-temp-sensor, seesaw-moist-sensor)",
+        help=(
+            "Sätt vilket demo-projekt som ska deployas utan prompt "
+            "(internal-temp-sensor, seesaw-moist-sensor, external-temp-sensor)"
+        ),
     )
     args = parser.parse_args(argv)
 
@@ -208,6 +234,17 @@ def main(argv: list[str] | None = None) -> int:
         str(demo_main),
         ":main.py",
     )
+
+    # Kopiera eventuella extra .py-filer från demo-katalogen (t.ex. DS18B20.py)
+    for module in project_root.glob("*.py"):
+        if module.name == "main.py":
+            continue
+        _run_mpremote(
+            args.port,
+            "cp",
+            str(module),
+            f":/{module.name}",
+        )
 
     if not args.skip_config:
         if demo_config.exists():
