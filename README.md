@@ -177,6 +177,25 @@ client.send_heartbeat()
 
 See [examples/internal-temp-sensor/main.py](examples/internal-temp-sensor/main.py) for a full loop that connects WiFi, streams the Pico W’s internal temperature sensor, sends heartbeats, and acknowledges commands.
 
+### Example demos
+
+This repository ships with a couple of ready-to-run demo projects that all use `PicoSwarmClient` and the same MQTT protocol:
+
+- **`internal-temp-sensor`** – reads the Pico W CPU temperature via `machine.ADC(4)` and publishes it once per minute.
+- **`seesaw-moist-sensor`** – talks to an Adafruit seesaw soil moisture sensor over I²C and reports moisture/temperature.
+- **`external-temp-sensor`** – reads a DS18B20 sensor on a GPIO pin using vendored `onewire`/`ds18x20` drivers.
+- **`waveshare-oled-HAT`** – drives a Waveshare Pico-OLED-1.3 HAT (SH1107, SPI) and exposes commands to show text and clear the display, plus the standard light command for the onboard LED.
+
+You can deploy any of them to a connected Pico W using the helper script:
+
+```bash
+python scripts/deploy_demo.py --port auto --install-umqtt --project waveshare-oled-HAT
+```
+
+Change `--project` to `internal-temp-sensor`, `seesaw-moist-sensor` or `external-temp-sensor` to deploy a different demo.
+
+If you omit `--project`, the script will show an interactive, numbered menu of all available demos so you can choose which one to deploy.
+
 ## Distributing via `mpremote mip`
 
 We host ready-to-install builds on GitHub Pages so devices can install the library with a single command.

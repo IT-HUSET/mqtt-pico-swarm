@@ -20,6 +20,7 @@ DEMOS = {
     "internal-temp-sensor": REPO_ROOT / "examples" / "internal-temp-sensor",
     "seesaw-moist-sensor": REPO_ROOT / "examples" / "seesaw-moist-sensor",
     "external-temp-sensor": REPO_ROOT / "examples" / "external-temp-sensor",
+    "waveshare-oled-HAT": REPO_ROOT / "examples" / "waveshare-oled-HAT",
 }
 UMQTT_PACKAGE = "micropython-umqtt.simple2"
 DS18X20_URL = (
@@ -201,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help=(
             "Sätt vilket demo-projekt som ska deployas utan prompt "
-            "(internal-temp-sensor, seesaw-moist-sensor, external-temp-sensor)"
+            "(internal-temp-sensor, seesaw-moist-sensor, external-temp-sensor, waveshare-oled-HAT)"
         ),
     )
     args = parser.parse_args(argv)
