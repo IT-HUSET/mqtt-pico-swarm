@@ -21,7 +21,7 @@ from DS18B20 import DS18B20Sensor
 
 
 CONFIG_FILE = "config.json"
-NETWORK_SSID = "kumliens"
+NETWORK_SSID = "ITH"
 NETWORK_PASSWORD = "xxx"
 PUBLISH_INTERVAL = 60
 DS18B20_PIN = 5
@@ -178,7 +178,12 @@ def main():
     client = PicoSwarmClient(config_file=CONFIG_FILE, debug=True)
 
     def publish_temperature_reading():
-        temperature_c = sensor.read_temperature_c()
+        try:
+            temperature_c = sensor.read_temperature_c()
+        except Exception as error:  # pragma: no cover
+            _log("Misslyckades att läsa extern temperatur: {}".format(error))
+            return
+
         temperature_c = round(temperature_c, 2)
         _log("Mäter extern temperatur: {:.2f} °C".format(temperature_c))
         payload = {
@@ -186,13 +191,20 @@ def main():
             "timestamp": current_timestamp(),
             "sensor": "external_ds18b20",
         }
-        client.publish_data("temperature", payload)
-        client.publish_log(
-            level="debug",
-            logger="external_temp.main",
-            message="Temperaturmätning utförd",
-            context={"temperature_c": temperature_c},
-        )
+        try:
+            client.publish_data("temperature", payload)
+            client.publish_log(
+                level="debug",
+                logger="external_temp.main",
+                message="Temperaturmätning utförd",
+                context={"temperature_c": temperature_c},
+            )
+        except ConnectionError as error:
+            _log("MQTT publish failed: {}".format(error))
+            return
+        except Exception as error:  # pragma: no cover
+            _log("Unexpected error during publish: {}".format(error))
+            return
 
     @client.on_command(COMMAND_TYPE_LIGHT)
     def handle_light(command):
@@ -288,24 +300,35 @@ def main():
         if connection is None:
             raise RuntimeError("MQTT connection manager saknas")
 
+        mqtt_connected = True
+
         while True:
             now = time.time()
 
             try:
-                connection.ensure_connected()
-                connection.process_incoming()
-            except ConnectionError:
-                continue
+                try:
+                    connection.ensure_connected()
+                    connection.process_incoming()
+                except ConnectionError as error:
+                    _log("MQTT keepalive failed: {}".format(error))
+                    mqtt_connected = False
+                else:
+                    mqtt_connected = True
 
-            if now - last_publish >= PUBLISH_INTERVAL:
-                publish_temperature_reading()
-                last_publish = now
+                if mqtt_connected and now - last_publish >= PUBLISH_INTERVAL:
+                    publish_temperature_reading()
+                    last_publish = now
 
-            if now - last_heartbeat >= heartbeat_interval:
-                client.send_heartbeat(now=now)
-                last_heartbeat = now
+                if mqtt_connected and now - last_heartbeat >= heartbeat_interval:
+                    client.send_heartbeat(now=now)
+                    last_heartbeat = now
 
-            time.sleep(0.1)
+                time.sleep(0.1)
+            except KeyboardInterrupt:
+                raise
+            except Exception as error:  # pragma: no cover
+                _log("Unhandled error in main loop: {}".format(error))
+                time.sleep(1)
     except KeyboardInterrupt:
         _log("Avslutar klient")
     finally:

@@ -18,152 +18,15 @@ from mqtt_pico_swarm.errors import ConnectionError
 from mqtt_pico_swarm.utils import current_timestamp, log
 
 from oled_driver import OLED_1inch3
+from oled_profile import CAPABILITIES, MAX_TEXT_LENGTH, sanitize_text_for_display
+from oled_ui import OledUI
 
 
 CONFIG_FILE = "config.json"
-NETWORK_SSID = "kumliens"
+NETWORK_SSID = "ITH"
 NETWORK_PASSWORD = "xxx"
 PUBLISH_INTERVAL = 60
 TEMPERATURE_CALIBRATION_OFFSET = 0.0
-MAX_TEXT_LENGTH = 16
-
-
-CAPPABILITIES_SENSORS = [
-    {
-        "id": "cpu_temp",
-        "display_name": "CPU temperature",
-        "sensor_type": "temperature",
-        "data_source": {"sensor_type": "temperature", "path": "data"},
-        "measures": [
-            {
-                "key": "temperature_c",
-                "display_name": "Temperature",
-                "unit": "C",
-                "value_type": "number",
-                "precision": 2,
-            }
-        ],
-    }
-]
-
-
-def _sanitize_text_for_display(text: str) -> str:
-    """Convert text to something the 8x8 ASCII font can show.
-
-    - Svenska tecken åäöÅÄÖ transliteras till a/o/A/O.
-    - Alla andra tecken utanför ASCII 32-126 ger fel.
-    """
-
-    replacements = {
-        "å": "a",
-        "ä": "a",
-        "ö": "o",
-        "Å": "A",
-        "Ä": "A",
-        "Ö": "O",
-    }
-
-    result_chars = []
-    for char in text:
-        if char in replacements:
-            char = replacements[char]
-        code = ord(char)
-        if 32 <= code <= 126:
-            result_chars.append(char)
-        else:
-            raise ValueError("Text contains characters not supported by the display")
-    return "".join(result_chars)
-
-
-CAPABILITIES = {
-    "sensors": CAPPABILITIES_SENSORS,
-    "commands": [
-        {
-            "id": "trigger_data",
-            "display_name": "Trigger measurement",
-            "command_type": "trigger-data",
-            "topic_suffix": "commands/trigger-data",
-            "parameters": [],
-        },
-        {
-            "id": "display_text",
-            "display_name": "Display text",
-            "command_type": "action",
-            "topic_suffix": "commands/action",
-            "parameters": [
-                {
-                    "name": "text",
-                    "display_name": "Text",
-                    "type": "string",
-                    "required": True,
-                },
-                {
-                    "name": "line",
-                    "display_name": "Line (0-7)",
-                    "type": "integer",
-                    "required": False,
-                    "default": 0,
-                    "min": 0,
-                    "max": 7,
-                },
-                {
-                    "name": "clear",
-                    "display_name": "Clear before writing",
-                    "type": "boolean",
-                    "required": False,
-                    "default": True,
-                },
-            ],
-        },
-        {
-            "id": "clear_display",
-            "display_name": "Clear display",
-            "command_type": "action",
-            "topic_suffix": "commands/action",
-            "parameters": [],
-        },
-        {
-            "id": "light",
-            "display_name": "Onboard LED",
-            "command_type": "light",
-            "topic_suffix": "commands/light",
-            "parameters": [
-                {
-                    "name": "state",
-                    "display_name": "State",
-                    "type": "enum",
-                    "values": ["on", "off", "toggle"],
-                    "required": True,
-                    "default": "on",
-                }
-            ],
-        },
-    ],
-    "ui_hints": {
-        "layout": [
-            {
-                "type": "sensor_panel",
-                "sensor_id": "cpu_temp",
-                "title": "CPU temperature",
-                "primary_measure": "temperature_c",
-                "chart": {
-                    "enabled": True,
-                    "window_minutes": 60,
-                },
-            },
-            {
-                "type": "commands_panel",
-                "title": "Display",
-                "commands": ["display_text", "clear_display"],
-            },
-            {
-                "type": "commands_panel",
-                "title": "Control",
-                "commands": ["light"],
-            },
-        ]
-    },
-}
 
 if machine is not None:
     try:
@@ -264,12 +127,10 @@ def _load_config(path: str = CONFIG_FILE):
 
 def main() -> None:
     oled = OLED_1inch3()
+    ui = OledUI(oled)
 
     try:
-        oled.clear()
-        oled.text_line("MQTT Pico Swarm", 0)
-        oled.text_line("WiFi: connect...", 1)
-        oled.show()
+        ui.show_boot_wifi_connecting()
     except Exception:
         pass
 
@@ -278,10 +139,7 @@ def main() -> None:
     except RuntimeError as error:
         _log("WiFi connection failed: {}".format(error))
         try:
-            oled.clear()
-            oled.text_line("WiFi: MISS", 0)
-            oled.text_line("Check SSID/pwd", 1)
-            oled.show()
+            ui.show_wifi_failed()
         except Exception:
             pass
         return
@@ -291,10 +149,7 @@ def main() -> None:
     except OSError:
         _log("config.json is missing. Copy config.json.example and fill in MQTT details.")
         try:
-            oled.clear()
-            oled.text_line("config.json", 0)
-            oled.text_line("missing", 1)
-            oled.show()
+            ui.show_config_missing()
         except Exception:
             pass
         return
@@ -306,46 +161,14 @@ def main() -> None:
     except Exception:
         mqtt_broker = ""
 
-    current_page = 0
-    last_temperature_c = None  # type: ignore[assignment]
-    last_hub_text = ""
-    last_hub_line = 3
-
-    def render_status_page() -> None:
-        oled.clear()
-        oled.text_line("Status", 0)
-        if device_id:
-            oled.text_line("ID: {}".format(device_id), 1)
-        if last_temperature_c is not None:
-            oled.text_line("CPU: {:.1f} C".format(last_temperature_c), 2)
-        if ip_address:
-            oled.text_line(ip_address, 3)
-        oled.show()
-
-    def render_hub_page() -> None:
-        oled.clear()
-        oled.text_line("Hub text", 0)
-        if last_hub_text:
-            line = last_hub_line
-            if line < 1:
-                line = 1
-            if line > 7:
-                line = 7
-            oled.text_line(last_hub_text, line)
-        oled.show()
-
-    def render_current_page() -> None:
-        if current_page == 0:
-            render_status_page()
-        else:
-            render_hub_page()
-
-    render_status_page()
+    ui.set_device_id(device_id)
+    ui.set_ip_address(ip_address)
+    ui.set_mqtt_broker(mqtt_broker)
+    ui.render_status_page()
 
     client = PicoSwarmClient(config_file=CONFIG_FILE, debug=True)
 
     def publish_temperature_reading() -> None:
-        nonlocal last_temperature_c
         try:
             temperature_c = read_internal_temperature(TEMPERATURE_CALIBRATION_OFFSET)
         except Exception as error:  # pragma: no cover
@@ -353,7 +176,6 @@ def main() -> None:
             return
 
         temperature_c = round(temperature_c, 2)
-        last_temperature_c = temperature_c
         _log("Measuring internal temperature: {:.2f} °C".format(temperature_c))
         payload = {
             "temperature_c": temperature_c,
@@ -371,20 +193,17 @@ def main() -> None:
         except ConnectionError as error:
             _log("MQTT publish failed: {}".format(error))
             try:
-                oled.text_line("MQTT: MISS", 4)
-                oled.show()
+                ui.show_mqtt_miss()
             except Exception:
                 pass
             return
-        if current_page == 0:
-            try:
-                render_status_page()
-            except Exception:
-                pass
+        try:
+            ui.set_temperature(temperature_c)
+        except Exception:
+            pass
 
     @client.on_command(COMMAND_TYPE_ACTION)
     def handle_action(command):  # type: ignore[no-untyped-def]
-        nonlocal last_hub_text, last_hub_line
         if not isinstance(command, dict):
             _log("Ignoring action command without JSON payload: {}".format(command))
             return False
@@ -412,7 +231,7 @@ def main() -> None:
                     raise ValueError(
                         "Text is too long (max {} characters)".format(MAX_TEXT_LENGTH)
                     )
-                text_str = _sanitize_text_for_display(text_str)
+                text_str = sanitize_text_for_display(text_str)
                 line = params.get("line", 0)
                 try:
                     line = int(line)
@@ -420,10 +239,7 @@ def main() -> None:
                     raise ValueError("Line must be an integer between 0 and 7")
                 if line < 0 or line > 7:
                     raise ValueError("Invalid line: {} (allowed 0-7)".format(line))
-                last_hub_text = text_str
-                last_hub_line = line
-                if current_page == 1:
-                    render_hub_page()
+                ui.set_hub_text(text_str, line)
                 handled = True
             elif action_type == "clear_display":
                 oled.clear()
@@ -531,11 +347,7 @@ def main() -> None:
 
     try:
         try:
-            line = "MQTT: connect..."
-            if mqtt_broker:
-                line = "MQTT: {}".format(mqtt_broker)
-            oled.text_line(line, 4)
-            oled.show()
+            ui.show_mqtt_connecting()
         except Exception:
             pass
 
@@ -544,15 +356,13 @@ def main() -> None:
         except ConnectionError as error:
             _log("MQTT connection failed: {}".format(error))
             try:
-                oled.text_line("MQTT: MISS", 4)
-                oled.show()
+                ui.show_mqtt_miss()
             except Exception:
                 pass
             return
 
         try:
-            oled.text_line("MQTT: OK", 4)
-            oled.show()
+            ui.show_mqtt_ok()
         except Exception:
             pass
 
@@ -584,65 +394,72 @@ def main() -> None:
             now = time.time()
 
             try:
-                connection.ensure_connected()
-                connection.process_incoming()
-            except ConnectionError as error:
-                _log("MQTT keepalive failed: {}".format(error))
                 try:
-                    oled.text_line("MQTT: MISS", 4)
-                    oled.show()
+                    connection.ensure_connected()
+                    connection.process_incoming()
+                except ConnectionError as error:
+                    _log("MQTT keepalive failed: {}".format(error))
+                    try:
+                        ui.show_mqtt_miss()
+                    except Exception:
+                        pass
+                    mqtt_connected = False
+                else:
+                    if not mqtt_connected:
+                        try:
+                            ui.show_mqtt_ok()
+                        except Exception:
+                            pass
+                    mqtt_connected = True
+
+                # Knapp A: växla sida (status <-> hub-text)
+                if _button_a is not None:
+                    try:
+                        value = _button_a.value()
+                    except Exception:
+                        value = 1
+                    if value == 0 and button_a_last == 1:
+                        ui.toggle_page()
+                    button_a_last = value
+
+                # Knapp B: trigga manuell CPU-mätning och skicka event
+                if _button_b is not None:
+                    try:
+                        value = _button_b.value()
+                    except Exception:
+                        value = 1
+                    if value == 0 and button_b_last == 1:
+                        _log("Button B: manual CPU measurement")
+                        publish_temperature_reading()
+                        try:
+                            client.publish_event(
+                                constants.EVENT_TYPE_INFO,
+                                "button_trigger",
+                                "Manual CPU temperature measurement via button B",
+                                severity=constants.SEVERITY_INFO,
+                            )
+                        except Exception:
+                            pass
+                    button_b_last = value
+
+                if mqtt_connected and now - last_publish >= PUBLISH_INTERVAL:
+                    publish_temperature_reading()
+                    last_publish = now
+
+                if mqtt_connected and now - last_heartbeat >= heartbeat_interval:
+                    client.send_heartbeat(now=now)
+                    last_heartbeat = now
+
+                time.sleep(0.1)
+            except KeyboardInterrupt:
+                raise
+            except Exception as error:
+                _log("Unhandled error in main loop: {}".format(error))
+                try:
+                    ui.show_mqtt_miss()
                 except Exception:
                     pass
-                mqtt_connected = False
-            else:
-                if not mqtt_connected:
-                    try:
-                        oled.text_line("MQTT: OK", 4)
-                        oled.show()
-                    except Exception:
-                        pass
-                mqtt_connected = True
-
-            # Knapp A: växla sida (status <-> hub-text)
-            if _button_a is not None:
-                try:
-                    value = _button_a.value()
-                except Exception:
-                    value = 1
-                if value == 0 and button_a_last == 1:
-                    current_page = 1 - current_page
-                    render_current_page()
-                button_a_last = value
-
-            # Knapp B: trigga manuell CPU-mätning och skicka event
-            if _button_b is not None:
-                try:
-                    value = _button_b.value()
-                except Exception:
-                    value = 1
-                if value == 0 and button_b_last == 1:
-                    _log("Button B: manual CPU measurement")
-                    publish_temperature_reading()
-                    try:
-                        client.publish_event(
-                            constants.EVENT_TYPE_INFO,
-                            "button_trigger",
-                            "Manual CPU temperature measurement via button B",
-                            severity=constants.SEVERITY_INFO,
-                        )
-                    except Exception:
-                        pass
-                button_b_last = value
-
-            if mqtt_connected and now - last_publish >= PUBLISH_INTERVAL:
-                publish_temperature_reading()
-                last_publish = now
-
-            if mqtt_connected and now - last_heartbeat >= heartbeat_interval:
-                client.send_heartbeat(now=now)
-                last_heartbeat = now
-
-            time.sleep(0.1)
+                time.sleep(1)
     except KeyboardInterrupt:
         _log("Stopping client")
     finally:

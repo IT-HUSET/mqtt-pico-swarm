@@ -230,7 +230,12 @@ def main():
     client = PicoSwarmClient(config_file=CONFIG_FILE, debug=True)
 
     def publish_with_logging():
-        moisture, temperature_c, percent = read_soil_sample(sensor)
+        try:
+            moisture, temperature_c, percent = read_soil_sample(sensor)
+        except Exception as error:  # pragma: no cover
+            _log("Misslyckades att läsa jordfuktighet: {}".format(error))
+            return
+
         _log(
             "Mätning - fukt: {} / temp: {:.2f}°C{}".format(
                 moisture,
@@ -238,17 +243,25 @@ def main():
                 " / {}%".format(round(percent, 1)) if percent is not None else "",
             )
         )
-        publish_soil_sample(client, moisture, temperature_c, percent)
-        client.publish_log(
-            level="debug",
-            logger="soil_sensor.main",
-            message="Soil sample publicerad",
-            context={
-                "moisture_raw": moisture,
-                "temperature_c": round(temperature_c, 2),
-                "moisture_percent": round(percent, 1) if percent is not None else None,
-            },
-        )
+
+        try:
+            publish_soil_sample(client, moisture, temperature_c, percent)
+            client.publish_log(
+                level="debug",
+                logger="soil_sensor.main",
+                message="Soil sample publicerad",
+                context={
+                    "moisture_raw": moisture,
+                    "temperature_c": round(temperature_c, 2),
+                    "moisture_percent": round(percent, 1) if percent is not None else None,
+                },
+            )
+        except ConnectionError as error:
+            _log("MQTT publish failed: {}".format(error))
+            return
+        except Exception as error:  # pragma: no cover
+            _log("Unexpected error during publish: {}".format(error))
+            return
 
 
     @client.on_command(COMMAND_TYPE_LIGHT)
@@ -340,24 +353,35 @@ def main():
         if connection is None:
             raise RuntimeError("MQTT connection manager saknas")
 
+        mqtt_connected = True
+
         while True:
             now = time.time()
 
             try:
-                connection.ensure_connected()
-                connection.process_incoming()
-            except ConnectionError:
-                continue
+                try:
+                    connection.ensure_connected()
+                    connection.process_incoming()
+                except ConnectionError as error:
+                    _log("MQTT keepalive failed: {}".format(error))
+                    mqtt_connected = False
+                else:
+                    mqtt_connected = True
 
-            if now - last_publish >= PUBLISH_INTERVAL:
-                publish_with_logging()
-                last_publish = now
+                if mqtt_connected and now - last_publish >= PUBLISH_INTERVAL:
+                    publish_with_logging()
+                    last_publish = now
 
-            if now - last_heartbeat >= heartbeat_interval:
-                client.send_heartbeat(now=now)
-                last_heartbeat = now
+                if mqtt_connected and now - last_heartbeat >= heartbeat_interval:
+                    client.send_heartbeat(now=now)
+                    last_heartbeat = now
 
-            time.sleep(0.1)
+                time.sleep(0.1)
+            except KeyboardInterrupt:
+                raise
+            except Exception as error:  # pragma: no cover
+                _log("Unhandled error in main loop: {}".format(error))
+                time.sleep(1)
     except KeyboardInterrupt:
         _log("Avslutar klient")
     finally:

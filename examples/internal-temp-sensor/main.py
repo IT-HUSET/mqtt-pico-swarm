@@ -173,7 +173,12 @@ def main():
 
     def publish_temperature_reading():
         """Grab a temperature sample and send it to the hub as sensor data."""
-        temperature_c = read_internal_temperature(TEMPERATURE_CALIBRATION_OFFSET)
+        try:
+            temperature_c = read_internal_temperature(TEMPERATURE_CALIBRATION_OFFSET)
+        except Exception as error:
+            _log("Misslyckades att läsa intern temperatur: {}".format(error))
+            return
+
         temperature_c = round(temperature_c, 2)
         _log("Mäter intern temperatur: {:.2f} °C".format(temperature_c))
         payload = {
@@ -181,13 +186,20 @@ def main():
             "timestamp": current_timestamp(),
             "sensor": "pico_w_cpu",
         }
-        client.publish_data("temperature", payload)
-        client.publish_log(
-            level="debug",
-            logger="internal_temp.main",
-            message="Temperaturmätning utförd",
-            context={"temperature_c": temperature_c},
-        )
+        try:
+            client.publish_data("temperature", payload)
+            client.publish_log(
+                level="debug",
+                logger="internal_temp.main",
+                message="Temperaturmätning utförd",
+                context={"temperature_c": temperature_c},
+            )
+        except ConnectionError as error:
+            _log("MQTT publish failed: {}".format(error))
+            return
+        except Exception as error:
+            _log("Unexpected error during publish: {}".format(error))
+            return
         try:
             now_rtc = time.localtime()
             _log(
@@ -296,27 +308,38 @@ def main():
         heartbeat_interval = client.get_config().get("heartbeat_interval", 60)
         last_heartbeat = time.time()
 
+        mqtt_connected = True
+
         while True:
             now = time.time()
 
-            # Säkerställ uppkoppling och processa inkommande kommandon
             try:
-                client._connection_manager.ensure_connected()
-                client._connection_manager.process_incoming()
-            except ConnectionError:
-                continue
+                # Säkerställ uppkoppling och processa inkommande kommandon
+                try:
+                    client._connection_manager.ensure_connected()
+                    client._connection_manager.process_incoming()
+                except ConnectionError as error:
+                    _log("MQTT keepalive failed: {}".format(error))
+                    mqtt_connected = False
+                else:
+                    mqtt_connected = True
 
-            # Publicera sensordata enligt intervall
-            if now - last_publish >= PUBLISH_INTERVAL:
-                publish_temperature_reading()
-                last_publish = now
+                # Publicera sensordata enligt intervall
+                if mqtt_connected and now - last_publish >= PUBLISH_INTERVAL:
+                    publish_temperature_reading()
+                    last_publish = now
 
-            # Skicka heartbeat enligt konfigurationen
-            if now - last_heartbeat >= heartbeat_interval:
-                client.send_heartbeat(now=now)
-                last_heartbeat = now
+                # Skicka heartbeat enligt konfigurationen
+                if mqtt_connected and now - last_heartbeat >= heartbeat_interval:
+                    client.send_heartbeat(now=now)
+                    last_heartbeat = now
 
-            time.sleep(0.1)
+                time.sleep(0.1)
+            except KeyboardInterrupt:
+                raise
+            except Exception as error:
+                _log("Unhandled error in main loop: {}".format(error))
+                time.sleep(1)
     except KeyboardInterrupt:
         _log("Avslutar klient")
     finally:

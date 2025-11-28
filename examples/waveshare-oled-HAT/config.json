@@ -6,7 +6,7 @@
     "reconnect_delay": 5,
     "max_reconnect_attempts": 10,
     "mqtt": {
-        "broker": "192.168.1.100",
+        "broker": "192.168.3.170",
         "port": 1883,
         "keepalive": 60,
         "client_id": "pico-waveshare-oled",
